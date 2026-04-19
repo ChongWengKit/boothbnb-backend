@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model users {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique @db.VarChar(255)
+  username  String   @unique @db.VarChar(50)
+  password  String?
+  salt      String?   @db.VarChar(32)
+  is_verified Boolean @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  role      Role     @default(HOST)
+  tokens    verify_tokens[]
+  reset_tokens reset_tokens[]
+  events    events[]
+  stripe_account_id String?   @db.VarChar(255)
+  stripe_payout_enabled Boolean @default(false)
+  booth_bookings booth_bookings[]
+  profile_photo String?
+  bookmarks bookmarks[]
+  admin_requests admin_requests[]
+  @@map("users")
+  
+}
+
+model bookmarks {
+  id        Int      @id @default(autoincrement())
+  user      users     @relation(fields: [user_id], references: [id])
+  user_id    Int
+  event_id   Int
+  event      events    @relation(fields: [event_id], references: [id])
+  created_at DateTime @default(now())
+  @@unique([user_id, event_id])
+  @@map("bookmarks")
+}
+
+model verify_tokens {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique @db.VarChar(255)
+  user      users     @relation(fields: [user_id], references: [id])
+  user_id    Int
+  created_at DateTime @default(now())
+  expires_in DateTime
+
+  @@map("verify_tokens")
+}
+model reset_tokens {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique @db.VarChar(255)
+  user      users     @relation(fields: [user_id], references: [id])
+  user_id    Int
+  created_at DateTime @default(now())
+  expires_in DateTime
+
+  @@map("reset_tokens")
+}
+
+model admin_tokens {
+  id         Int      @id @default(autoincrement())
+  email      String   @unique 
+  token  String   @unique
+  created_at DateTime @default(now())
+  expires_in  DateTime
+}
+
+enum Role {
+  VENDOR
+  HOST
+  ADMIN
+}
+
+enum Category {
+  ART_CRAFT
+  FOOD_BEVERAGE
+  FASHION_BEAUTY
+  TECH_GADGETS
+  HOME_LIVING
+  CORPORATE_TRADE
+  ANIME_COMIC
+  THRIFT_VINTAGE
+  WELLNESS_FITNESS
+  PET_FAIR
+  EDUCATIONAL
+  OTHERS
+}
+
+model events {
+  id          Int      @id @default(autoincrement())
+  category Category @default(OTHERS)
+  host_id     Int
+  title       String      @db.VarChar(255)
+  description String      @db.Text
+  address     String      @db.VarChar(255)
+  start_date  DateTime
+  end_date    DateTime
+  status      EventStatus
+  booths      booths[]
+  host        users       @relation(fields: [host_id], references: [id])
+  latitude    Float
+  longitude   Float
+  slug        String
+  images     event_images[]
+  bookmarks  bookmarks[]
+  @@index([slug])
+  @@map("events")
+}
+
+model event_images {
+  id          Int      @id @default(autoincrement())
+  event_id    Int
+  url         String      @db.VarChar(255)
+  event        events     @relation(fields: [event_id], references: [id])
+  @@map("event_images")
+}
+
+enum BoothType {
+  AVAILABLE
+  RESERVED
+  SOLD
+  LOCKED
+}
+
+model booths {
+  id             Int           @id @default(autoincrement())
+  event_id       Int
+  name           String           @db.VarChar(20)
+  type           BoothType
+  x              Int
+  y              Int
+  width          Int
+  height         Int
+  rotation       Float            @default(0)
+  price          Decimal          @db.Decimal(10, 2)
+  description   String?           @db.Text
+  event          events           @relation(fields: [event_id], references: [id])
+  bookings       booth_bookings[]
+
+  @@map("booths")
+}
+
+model booth_bookings {
+  id             Int        @id @default(autoincrement())
+  booth_id       Int 
+  vendor_id      Int
+  amount         Decimal    @db.Decimal(10, 2)
+  payment_status PaymentStatus
+  booked_at      DateTime      @default(now())
+  session_id    String?       @db.VarChar(255)
+  booth          booths        @relation(fields: [booth_id], references: [id])
+  vendor         users         @relation(fields: [vendor_id], references: [id])
+  booth_name     String?       @db.VarChar(50)
+  event_name     String?       @db.VarChar(255)
+  cardBrand      String?       @db.VarChar(20)
+  cardLast4      String?       @db.VarChar(4)
+  stripeChargeId String?       @db.VarChar(255)
+  receiptUrl     String?       @db.Text
+
+  @@map("booth_bookings")
+}
+
+enum ActionType {
+  HOST_APPROVAL
+}
+
+enum AdminRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model admin_requests {
+  id          Int      @id @default(autoincrement())
+  user_id    Int
+  user       users     @relation(fields: [user_id], references: [id])
+  action_type ActionType
+  status     AdminRequestStatus @default(PENDING)
+  created_at DateTime @default(now())
+  updated_at DateTime? @updatedAt
+
+  @@map("admin_requests")
+}
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+model email_logs {
+  id          Int      @id @default(autoincrement())
+  user_id    Int
+  category   EmailLogCategory
+  status      EmailLogStatus   @default(PENDING)
+  email_id    String?          @db.VarChar(255)
+  payload   Json
+  attempts    Int      @default(0)
+
+  @@map("email_logs")
+}
+
+enum EmailLogCategory {
+  VERIFICATION
+  PASSWORD_RESET
+  BOOKING_CONFIRMATION
+  HOST_APPROVED
+  ADMIN_INVITATION
+}
+
+enum EmailLogStatus {
+  PENDING
+  SUCCESSFUL
+  FAILED
+  BOUNCED
+  COMPLAINED
+}
