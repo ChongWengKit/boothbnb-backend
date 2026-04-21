@@ -15,11 +15,13 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export const attemptSend = async (logId: number) => {
   const log = await prisma.email_logs.findUnique({ where: { id: logId } });
 
-  if (!log || [
-    EmailLogStatus.SUCCESSFUL,
-    EmailLogStatus.BOUNCED,
-    EmailLogStatus.COMPLAINED
-  ].includes(log.status)) return null;
+  if (!log) return null;
+
+  const status = log.status;
+
+  if (status === "SUCCESSFUL" || status === "BOUNCED" || status === "COMPLAINED") {
+    return null;
+  }
 
   const payload = log.payload as any;
   let emailOptions: { to: string[]; subject: string; react: JSX.Element } | null = null;
@@ -66,7 +68,7 @@ export const attemptSend = async (logId: number) => {
       case EmailLogCategory.ADMIN_INVITATION: {
         const rawToken = crypto.randomBytes(32).toString('hex');
         const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
-        
+
         await deleteAdminTokensByEmail(payload.email);
         await createAdminToken(payload.email, hashedToken, new Date(Date.now() + 1000 * 60 * 60 * 24));
 
@@ -110,7 +112,7 @@ export const attemptSend = async (logId: number) => {
     return await prisma.email_logs.update({
       where: { id: log.id },
       data: {
-        status: EmailLogStatus.PENDING, 
+        status: EmailLogStatus.PENDING,
         email_id: data?.id,
         attempts: currentAttempts,
       },
@@ -152,7 +154,7 @@ export const sendHostApproveMail = async (user_id: number, name: string, email: 
   return attemptSend(log.id);
 };
 
-export const logEmail = async (user_id: number, category: EmailLogCategory, payload: Record<string, any>, status: EmailLogStatus = EmailLogStatus.PENDING, email_id?: string) => {
+export const logEmail = async (user_id: number, category: EmailLogCategory, payload: Record<string, any>, status: EmailLogStatus = EmailLogStatus.PENDING, email_id?: string ) => {
 
   return prisma.email_logs.create({
     data: {
@@ -160,7 +162,7 @@ export const logEmail = async (user_id: number, category: EmailLogCategory, payl
       category,
       payload,
       status,
-      email_id
+      email_id: email_id ?? null,
     },
   });
 }

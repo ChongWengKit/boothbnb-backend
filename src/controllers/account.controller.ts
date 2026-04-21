@@ -7,6 +7,9 @@ export const getAccount = async (req: Request, res: Response<ApiResponse<any>>) 
     try {
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
+        if (!req.user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
         const username = req.user.username;
         const user = await authService.findUserByUsername(username);
 
@@ -72,7 +75,10 @@ export const getPublicAccount = async (req: Request, res: Response<ApiResponse<a
     try {
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
-        const username = req.params.username;
+        const username = req.params.username as string;
+        if (!username) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
         const user = await authService.findUserByUsername(username);
 
         if (!user) {
@@ -129,6 +135,6 @@ export const getPublicAccount = async (req: Request, res: Response<ApiResponse<a
             meta: meta
         });
     } catch (error) {
-            return res.status(500).json({ success: false, message: 'Internal server error processing' });
-        }
+        return res.status(500).json({ success: false, message: 'Internal server error processing' });
+    }
 };

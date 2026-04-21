@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-
+import {User} from '../types/types.js';
 export const checkAuthenticationToken = (req: Request, res: Response, next: NextFunction) => {
   const authenticationToken = req.header('Authorization')?.replace('bearer ', '');
   if (!authenticationToken) {
@@ -15,7 +15,7 @@ export const checkAuthenticationToken = (req: Request, res: Response, next: Next
   try {
     const decodedToken = jwt.verify(authenticationToken, secret);
     console.log("Decoded token:", decodedToken);
-    req.user = decodedToken;
+    req.user = decodedToken as User;
     next();
   } catch (error) {
     console.log("Token verification failed:", error);

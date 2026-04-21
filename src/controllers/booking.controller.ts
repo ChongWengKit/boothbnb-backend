@@ -6,7 +6,9 @@ import { Role } from '@prisma/client';
 
 export const getUserBookings = async (req: Request, res: Response<ApiResponse<any>>) => {
     try {
-        console.log(req.user)
+        if (!req.user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
         const userId = parseInt(req.user.id);
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
@@ -29,13 +31,15 @@ export const getUserBookings = async (req: Request, res: Response<ApiResponse<an
         });
     } catch (error) {
         console.log(error)
-            return res.status(500).json({ success: false, message: 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
 
 export const getUserPaidBookings = async (req: Request, res: Response<ApiResponse<any>>) => {
     try {
-        console.log(req.user)
+        if (!req.user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
         const userId = parseInt(req.user.id);
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
@@ -58,13 +62,16 @@ export const getUserPaidBookings = async (req: Request, res: Response<ApiRespons
         });
     } catch (error) {
         console.log(error)
-            return res.status(500).json({ success: false, message: 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
 
 export const getBookingById = async (req: Request<{ id: string }>, res: Response<ApiResponse<any>>) => {
     try {
         const bookingId = parseInt(req.params.id);
+        if (!req.user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
         const userId = parseInt(req.user.id);
 
         const booking = await eventService.getBookingById(bookingId);
@@ -83,6 +90,6 @@ export const getBookingById = async (req: Request<{ id: string }>, res: Response
             data: booking
         });
     } catch (error) {
-            return res.status(500).json({ success: false, message: 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };

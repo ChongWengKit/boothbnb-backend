@@ -54,7 +54,7 @@ export const getEventsBySearchRequest = async (request: SearchEventRequest) => {
     status: EventStatus.PUBLISHED as any,
   };
 
-  const range = 0.5; 
+  const range = 0.5;
 
   if (title) {
     where.OR = [
@@ -65,30 +65,30 @@ export const getEventsBySearchRequest = async (request: SearchEventRequest) => {
   if (ne_lat && sw_lat && ne_lng && sw_lng) {
     where.latitude = { gte: Number(sw_lat), lte: Number(ne_lat) };
     where.longitude = { gte: Number(sw_lng), lte: Number(ne_lng) };
-  } 
+  }
   else if (longitude && latitude) {
     where.latitude = { gte: latitude - range, lte: latitude + range };
     where.longitude = { gte: longitude - range, lte: longitude + range };
   }
 
   if (start_date && end_date) {
-  const searchStart = new Date(start_date);
-  const searchEnd = new Date(end_date);
+    const searchStart = new Date(start_date);
+    const searchEnd = new Date(end_date);
 
 
-  where.AND = [
-    {
-      start_date: {
-        gte: searchStart, 
+    where.AND = [
+      {
+        start_date: {
+          gte: searchStart,
+        },
       },
-    },
-    {
-      end_date: {
-        lte: searchEnd,  
+      {
+        end_date: {
+          lte: searchEnd,
+        },
       },
-    },
-  ];
-}
+    ];
+  }
 
   if (category) {
     where.category = category as any;
@@ -211,10 +211,13 @@ export const updateBoothBooking = async (id: number, sessionId: string) => {
   });
 }
 export const getBookingsByUserId = async (userId: number, page: number = 1, limit: number = 20, paymentStatus?: PaymentStatus) => {
-  const where = {
+  const where: Prisma.booth_bookingsWhereInput = {
     vendor_id: userId,
-    payment_status: paymentStatus ? { in: [paymentStatus] } : undefined
   };
+
+  if (paymentStatus) {
+    where.payment_status = { in: [paymentStatus] };
+  }
   const skip = (page - 1) * limit;
   const [bookings, total] = await Promise.all([
     prisma.booth_bookings.findMany({
@@ -260,10 +263,10 @@ export const confirmBoothBooking = async (
   bookingId: number,
   status: PaymentStatus,
   paymentDetails?: {
-    cardBrand?: string;
-    cardLast4?: string;
-    stripeChargeId?: string;
-    receiptUrl?: string;
+    cardBrand?: string | undefined;
+    cardLast4?: string | undefined;
+    stripeChargeId?: string | undefined;
+    receiptUrl?: string | undefined;
   }
 ) => {
   return prisma.booth_bookings.update({
@@ -271,10 +274,10 @@ export const confirmBoothBooking = async (
     data: {
       payment_status: status,
       ...(paymentDetails && {
-        cardBrand: paymentDetails.cardBrand,
-        cardLast4: paymentDetails.cardLast4,
-        stripeChargeId: paymentDetails.stripeChargeId,
-        receiptUrl: paymentDetails.receiptUrl,
+        cardBrand: paymentDetails.cardBrand as string | null,
+        cardLast4: paymentDetails.cardLast4 as string | null,
+        stripeChargeId: paymentDetails.stripeChargeId as string | null,
+        receiptUrl: paymentDetails.receiptUrl as string | null,
       })
     },
   });
@@ -310,7 +313,7 @@ export const updateEvent = async (id: number, data: UpdateEventRequest) => {
   if (images) {
     updateData.images = {
       deleteMany: {},
-      create: images.map(url => ({ url })) 
+      create: images.map(url => ({ url }))
     };
   }
 
@@ -374,6 +377,8 @@ export const getEventsByHostId = async (hostId: number, page: number = 1, limit:
         title: true,
         address: true,
         start_date: true,
+        latitude: true,
+        longitude: true,
         status: true,
         slug: true,
         end_date: true,
@@ -485,11 +490,6 @@ export const getEventDetailsBySlug = async (slug: string) => {
           id: true,
           username: true,
           profile_photo: true
-        }
-      },
-      _count: {
-        select: {
-          bookmarks: true
         }
       },
       images: {

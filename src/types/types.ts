@@ -1,3 +1,5 @@
+import { Category } from "@prisma/client";
+
 export interface SignupRequest {
   email: string;
   username: string;
@@ -26,7 +28,7 @@ export enum BoothType {
 
 export enum ActionType {
   HOST_APPROVAL = 'HOST_APPROVAL',
-  
+
 }
 export interface ApiResponse<T> {
   success: boolean;
@@ -39,7 +41,7 @@ export interface ApiResponse<T> {
     itemsPerPage: number;
     hasNextPage: boolean;
     hasPreviousPage: boolean;
-  };
+  } | undefined;
 }
 
 export interface SignInRequest {
@@ -48,13 +50,13 @@ export interface SignInRequest {
 }
 
 export interface SignInResponse {
-    id: number;
-    email: string;
-    username: string;
-    role?: Role;
-    created_at: Date;
-    authentication_token?: string;
-    profile_photo?: string | null;
+  id: number;
+  email: string;
+  username: string;
+  role?: Role;
+  created_at: Date;
+  authentication_token?: string;
+  profile_photo?: string | null;
 
 }
 
@@ -64,8 +66,12 @@ export interface SearchEventRequest {
   latitude?: number | null | undefined;
   start_date?: Date | null | undefined;
   end_date?: Date | null | undefined;
-  category?: number | null | undefined;
-  page?: number ;
+  category?: string | undefined;
+  ne_lat?: number | null | undefined;
+  ne_lng?: number | null | undefined;
+  sw_lat?: number | null | undefined;
+  sw_lng?: number | null | undefined;
+  page?: number;
   limit?: number;
 }
 
@@ -77,7 +83,7 @@ export interface CreateEventRequest {
   latitude: number;
   start_date: string;
   end_date: string;
-  category_id: number;
+  category: Category;
   images: string[];
   booths: Array<{
     name: string;
@@ -97,6 +103,18 @@ export interface UpdateEventRequest {
   address?: string;
   longitude?: number;
   latitude?: number;
+  category? : Category;
+  booths?: Array<{
+    id: number;
+    name: string;
+    type: BoothType;
+    price: any;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    rotation: number;
+  }>;
   start_date?: string;
   end_date?: string;
   category_id?: number;
@@ -116,7 +134,7 @@ export type SearchEventResponse = Array<{
   total_capacity: number;
   total_bookings: number;
   available_booths?: number;
-  
+
 }>;
 
 export enum EventStatus {
@@ -139,9 +157,7 @@ export interface CloudinarySignatureResponse {
   folder: string;
 }
 
-export interface EventParamsRequest {
-    slug: string;
-}
+
 
 export interface EventParamsResponse {
   id: number;
@@ -177,19 +193,41 @@ export interface EventParamsResponse {
   is_bookmarked: boolean;
 }
 
-export enum EmailLogCategory
-{
+export enum EmailLogCategory {
   VERIFY_EMAIL = 'VERIFY_EMAIL',
   RESET_PASSWORD = 'RESET_PASSWORD',
   BOOKING_CONFIRMED = 'BOOKING_CONFIRMED',
   HOST_APPROVE = 'HOST_APPROVE'
 }
 
-export enum AdminRequestStatus
-{ PENDING = 'PENDING',
- APPROVED = 'APPROVED',
- REJECTED = 'REJECTED',}
+export enum AdminRequestStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
 export interface UpdateAdminRequestParams {
   id: number;
   status?: AdminRequestStatus;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: User; 
+    }
+  }
+}
+declare global {
+  namespace Express {
+    interface ParamsDictionary {
+      slug?: string;
+    }
+  }
+}
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  role: Role;
+  stripe_account_id?: string
 }

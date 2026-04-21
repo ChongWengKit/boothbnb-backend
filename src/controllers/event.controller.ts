@@ -2,7 +2,6 @@ import { ApiResponse, BoothType, CreateEventRequest, EventStatus, SearchEventReq
 import * as eventService from '../services/event.service.js';
 import type { Request, Response } from 'express';
 import { Role } from '../types/types.js';
-import { EventParamsRequest } from '../types/types.js';
 import { EventParamsResponse } from '../types/types.js';
 import Stripe from 'stripe';
 import jwt from 'jsonwebtoken';
@@ -10,6 +9,7 @@ import * as bookmarkService from '../services/bookmark.service.js';
 import { PaymentStatus, EmailLogCategory, EmailLogStatus } from '@prisma/client';
 import { findUserById } from '../services/auth.service.js';
 import * as emailService from '../services/mail.service.js';
+import { User } from '../types/types.js'
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: '2026-03-25.dahlia',
 });
@@ -39,8 +39,6 @@ export const searchEvents = async (req: Request, res: Response<ApiResponse<Searc
             const locked_count = event.booths.filter(b => b.type === BoothType.LOCKED).length;
             const total_bookings = event.booths.filter(b => b.type === BoothType.RESERVED || b.type === BoothType.SOLD).length;
             const total_capacity = event._count.booths - locked_count;
-            console.log(searchRequest.start_date, searchRequest.end_date);
-            console.log(event.start_date, event.end_date)
             const thumbnail = event.images[0]?.url || null;
             return {
                 id: event.id,
@@ -74,12 +72,15 @@ export const searchEvents = async (req: Request, res: Response<ApiResponse<Searc
         });
     } catch (error) {
         console.log(error)
-            return res.status(500).json({ success: false, message: 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 }
 
 export const createEvent = async (req: Request<{}, {}, CreateEventRequest>, res: Response<ApiResponse<any>>) => {
     try {
+        if (!req.user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
         const hostId = req.user.id;
         if (req.user.role !== Role.HOST) {
             return res.status(403).json({ success: false, message: 'Forbidden. Only hosts can create events.' });
@@ -119,7 +120,7 @@ export const createEvent = async (req: Request<{}, {}, CreateEventRequest>, res:
 
     } catch (error) {
         console.log(error);
-            return res.status(500).json({ success: false, message: 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
 
@@ -127,6 +128,9 @@ export const updateEvent = async (req: Request<{ slug: string }, {}, UpdateEvent
     try {
         const { slug } = req.params;
         const updateData = req.body;
+        if (!req.user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
         const hostId = parseInt(req.user.id);
 
         if (req.user.role !== Role.HOST) {
@@ -146,13 +150,16 @@ export const updateEvent = async (req: Request<{ slug: string }, {}, UpdateEvent
 
         return res.status(200).json({ success: true, message: 'Event updated successfully' });
     } catch (error) {
-            return res.status(500).json({ success: false, message: 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 }
 
 export const publishEvent = async (req: Request<{ slug: string }>, res: Response<ApiResponse<any>>) => {
     try {
         const { slug } = req.params;
+        if (!req.user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
         const hostId = parseInt(req.user.id);
 
         const event = await eventService.getEventBySlug(slug, [EventStatus.DRAFT, EventStatus.CLOSED]);
@@ -176,13 +183,16 @@ export const publishEvent = async (req: Request<{ slug: string }>, res: Response
 
         return res.status(200).json({ success: true, message: 'Event published successfully' });
     } catch (error) {
-            return res.status(500).json({ success: false, message: 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 }
 
 export const closeEvent = async (req: Request<{ slug: string }>, res: Response<ApiResponse<any>>) => {
     try {
         const { slug } = req.params;
+        if (!req.user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
         const hostId = parseInt(req.user.id);
 
         const event = await eventService.getEventBySlug(slug);
@@ -199,14 +209,16 @@ export const closeEvent = async (req: Request<{ slug: string }>, res: Response<A
         return res.status(200).json({ success: true, message: 'Event Closed successfully' });
     } catch (error) {
         console.log(error)
-            return res.status(500).json({ success: false, message: 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 }
 
 
 export const findEventsByHostId = async (req: Request, res: Response<ApiResponse<SearchEventResponse>>) => {
     try {
-        console.log(req.user.id)
+        if (!req.user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
         const user_id = req.user.id;
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
@@ -233,6 +245,8 @@ export const findEventsByHostId = async (req: Request, res: Response<ApiResponse
                 address: event.address,
                 start_date: event.start_date,
                 end_date: event.end_date,
+                latitude: event.latitude,
+                longitude: event.longitude,
                 status: event.status,
                 thumbnail: thumbnail,
                 total_capacity,
@@ -256,17 +270,24 @@ export const findEventsByHostId = async (req: Request, res: Response<ApiResponse
         });
     } catch (error) {
         console.log("error")
-            return res.status(500).json({ success: false, message: 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 }
 
 export const getEventBySlug = async (
-    req: Request<EventParamsRequest>,
+    req: Request,
     res: Response<ApiResponse<EventParamsResponse>>
 ) => {
     try {
         const { slug } = req.params;
-        const event = await eventService.getEventBySlug(slug, [EventStatus.PUBLISHED, EventStatus.CLOSED, EventStatus.CANCELLED]);
+        if(!slug)
+        {
+             return res.status(404).json({
+                success: false,
+                message: 'Event not found'
+            });
+        }
+        const event = await eventService.getEventBySlug(slug as string, [EventStatus.PUBLISHED, EventStatus.CLOSED, EventStatus.CANCELLED]);
 
         if (!event) {
             return res.status(404).json({
@@ -290,8 +311,11 @@ export const getEventBySlug = async (
                 try {
                     const secret = process.env.JWT_SECRET;
                     if (secret) {
-                        const decoded = jwt.verify(token, secret) as { id: string };
-                        userId = Number(decoded.id);
+                        if (token) {
+                            const decoded = jwt.verify(token, process.env.JWT_SECRET!) as unknown as User; userId = Number(decoded.id);
+                                                    userId = Number(decoded.id);
+
+                        }
                     }
                 } catch (e) {
                 }
@@ -329,18 +353,22 @@ export const getEventBySlug = async (
     } catch (error) {
         console.log(error)
         console.log("????????????????????")
-            return res.status(500).json({ success: false, message: 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
 
     }
 };
 
 export const getEventDetailsBySlug = async (
-    req: Request<EventParamsRequest>,
+    req: Request,
     res: Response<ApiResponse<any>>
 ) => {
     try {
         const { slug } = req.params;
-        const event = await eventService.getEventDetailsBySlug(slug);
+        if(!slug)
+        {
+            return res.status(404).json({ success: false, message: 'Forbidden. Only the host can view event details.' });
+        }
+        const event = await eventService.getEventDetailsBySlug(slug as string);
 
         if (!event) {
             return res.status(404).json({
@@ -348,7 +376,9 @@ export const getEventDetailsBySlug = async (
                 message: 'Event not found'
             });
         }
-
+        if (!req.user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
         const eventData = event as any;
         if (req.user.role !== Role.HOST || eventData.host_id !== parseInt(req.user.id)) {
             return res.status(403).json({ success: false, message: 'Forbidden. Only the host can view event details.' });
@@ -376,7 +406,7 @@ export const getEventDetailsBySlug = async (
 
     } catch (error) {
         console.log(error)
-            return res.status(500).json({ success: false, message: 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
 
@@ -386,7 +416,9 @@ export const checkoutByUpdateEventReserved = async (
 ) => {
     try {
         const { eventId, boothId } = req.body;
-        console.log(eventId, boothId)
+        if (!req.user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }        
         const vendorId = parseInt(req.user.id);
         console.log(req.user)
 
@@ -464,7 +496,7 @@ export const checkoutByUpdateEventReserved = async (
         return res.status(200).json({ success: true, message: 'Booth reserved successfully', data: session.url });
     } catch (error) {
         console.log(error)
-            return res.status(500).json({ success: false, message: 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 }
 

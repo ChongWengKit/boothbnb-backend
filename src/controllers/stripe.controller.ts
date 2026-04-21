@@ -12,6 +12,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
 
 export const createStripeConnectAccount = async (req: Request, res: Response) => {
     try {
+        if (!req.user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
         const userId = parseInt(req.user.id);
         const user = await prisma.users.findUnique({ where: { id: userId } });
 
@@ -46,12 +49,15 @@ export const createStripeConnectAccount = async (req: Request, res: Response) =>
 
         return res.status(200).json({ success: true, url: accountLink.url });
     } catch (error) {
-            return res.status(500).json({ success: false, message: 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
 
 export const checkStripeStatus = async (req: Request, res: Response) => {
     try {
+        if (!req.user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
         const userId = parseInt(req.user.id);
         const user = await prisma.users.findUnique({ where: { id: userId } });
 
@@ -70,7 +76,7 @@ export const checkStripeStatus = async (req: Request, res: Response) => {
 
         return res.json({ hasAccountId, payoutsEnabled, accountId: user.stripe_account_id });
     } catch (error) {
-            return res.status(500).json({ success: false, message: 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
 
@@ -107,12 +113,12 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
                 const charge = paymentIntent?.latest_charge as Stripe.Charge;
                 await eventService.confirmUpdateBoothStatus(boothId, BoothType.SOLD);
                 await eventService.confirmBoothBooking(bookingId, PaymentStatus.PAID, {
-                    cardBrand: charge?.payment_method_details?.card?.brand,
-                    cardLast4: charge?.payment_method_details?.card?.last4,
+                    cardBrand: charge?.payment_method_details?.card?.brand ?? '',
+                    cardLast4: charge?.payment_method_details?.card?.last4 ?? '',
                     stripeChargeId: charge?.id,
-                    receiptUrl: charge?.receipt_url,
+                    receiptUrl: charge?.receipt_url?? '',
                 });
-                if (metadata.userEmail && metadata.userName && metadata.eventTitle && metadata.boothName && metadata.bookingId) {
+                if (metadata.userEmail && metadata.userName && metadata.eventTitle && metadata.boothName && metadata.bookingId && metadata.userId) {
                     const userEmail = metadata.userEmail;
                     const userName = metadata.userName;
                     const eventTitle = metadata.eventTitle;

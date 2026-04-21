@@ -31,10 +31,10 @@ cron.schedule('*/1 * * * *', async () => {
                     const charge = paymentIntent?.latest_charge as Stripe.Charge;
 
                     await eventService.confirmBoothBooking(booking.id, PaymentStatus.PAID, {
-                        cardBrand: charge?.payment_method_details?.card?.brand,
-                        cardLast4: charge?.payment_method_details?.card?.last4,
+                        cardBrand: charge?.payment_method_details?.card?.brand ?? '',
+                        cardLast4: charge?.payment_method_details?.card?.last4?? '',
                         stripeChargeId: charge?.id,
-                        receiptUrl: charge?.receipt_url,
+                        receiptUrl: charge?.receipt_url?? '',
                     });
                     await eventService.confirmUpdateBoothStatus(booking.booth_id, BoothType.SOLD);
                     console.log(`[Cron] SUCCESS: Booking ${booking.id} PAID.`);

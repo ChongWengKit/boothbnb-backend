@@ -1,10 +1,11 @@
 {
-  "name": "my-app-backend",
+  "name": "boothbnb-backend",
   "version": "1.0.0",
   "description": "",
   "type": "module",
   "main": "index.js",
   "scripts": {
+    "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsx watch src/index.ts"
   },

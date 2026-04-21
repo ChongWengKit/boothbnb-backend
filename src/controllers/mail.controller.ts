@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/db.js';
-import { EmailLogStatus } from '@prisma/client';
+import { EmailLogCategory, EmailLogStatus } from '@prisma/client';
 import { updateEmailLogStatus } from '../services/mail.service.js';
 import { getEmailLogById, attemptSend, getAllEmailLogs } from '../services/mail.service.js';
-import { EmailLogCategory } from '@prisma/client';
+import { Category } from '@prisma/client';
 import {sendVerifyEmail, sendResetPasswordMail, sendBookingConfirmedMail, sendHostApproveMail} from '../services/mail.service.js';
 export const handleResendWebhook = async (req: Request, res: Response) => {
     try {
@@ -38,8 +38,8 @@ export const getEmailLogs = async (req: Request, res: Response) => {
     try {
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
-        const status = req.query.status as string | undefined;
-        const category = req.query.category as string | undefined;
+        const status = req.query.status as EmailLogStatus | undefined;
+        const category = req.query.category as EmailLogCategory | undefined;
         const search = req.query.search as string | undefined;
         const logs = await getAllEmailLogs(page, limit, status, category, search);
         return res.status(200).json({

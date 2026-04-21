@@ -8,11 +8,14 @@ import { createBookmark, deleteBookmark, findBookmarkByUserId } from '../service
 export const addFavorite = async (req: Request, res: Response<ApiResponse<{}>>) => {
   try {
     const { eventId } = req.body;
+    if (!req.user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
     const userId = req.user.id;
     if (!userId || !eventId) {
       throw new Error('Invalid Request.');
     }
-    await createBookmark(userId, parseInt(eventId));
+    await createBookmark(parseInt(userId), parseInt(eventId));
 
     return res.status(201).json({
       success: true,
@@ -20,35 +23,41 @@ export const addFavorite = async (req: Request, res: Response<ApiResponse<{}>>) 
     });
   } catch (error) {
     console.log(error);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }
 
 export const deleteFavorite = async (req: Request, res: Response<ApiResponse<{}>>) => {
   try {
     const { eventId } = req.body;
+    if (!req.user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
     const userId = req.user.id;
     if (!userId || !eventId) {
       throw new Error('Invalid Request.');
     }
-    await deleteBookmark(userId, parseInt(eventId));
+    await deleteBookmark(parseInt(userId), parseInt(eventId));
 
     return res.status(200).json({
       success: true,
       message: 'Bookmark successfully deleted.',
     });
   } catch (error) {
-      return res.status(500).json({ success: false, message: 'Internal server error' });
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }
 
 export const getFavoriteBookmarkId = async (req: Request, res: Response<ApiResponse<number[]>>) => {
   try {
+    if (!req.user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
     const userId = req.user.id;
     if (!userId) {
       throw new Error('Invalid Request.');
     }
-    const bookmarks = await findBookmarkIdkByUserId(userId);
+    const bookmarks = await findBookmarkIdkByUserId(parseInt(userId));
     const bookmarkIds = bookmarks.map(b => b.event_id);
     return res.status(200).json({
       success: true,
@@ -57,19 +66,22 @@ export const getFavoriteBookmarkId = async (req: Request, res: Response<ApiRespo
     });
   } catch (error) {
     console.log(error);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }
 
 export const getFavorite = async (req: Request, res: Response<ApiResponse<SearchEventResponse>>) => {
   try {
+    if (!req.user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
     const userId = req.user.id;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     if (!userId) {
       throw new Error('Invalid Request.');
     }
-    const { bookmarks, total } = await findBookmarkByUserId(userId, page, limit);
+    const { bookmarks, total } = await findBookmarkByUserId(parseInt(userId), page, limit);
 
     const formattedEvents = bookmarks.map((item) => {
       const event = item.event;
@@ -77,7 +89,7 @@ export const getFavorite = async (req: Request, res: Response<ApiResponse<Search
       const locked_count = event.booths.filter(b => b.type === BoothType.LOCKED).length;
       const total_bookings = event.booths.filter(b => b.type === BoothType.RESERVED || b.type === BoothType.SOLD).length;
       const total_capacity = event._count.booths - locked_count;
-      
+
       const thumbnail = event.images[0]?.url || null;
 
       return {
@@ -87,6 +99,8 @@ export const getFavorite = async (req: Request, res: Response<ApiResponse<Search
         address: event.address,
         start_date: event.start_date,
         end_date: event.end_date,
+        latitude:event.latitude,
+        longitude:event.longitude,
         thumbnail: thumbnail,
         total_capacity,
         total_bookings,
@@ -111,6 +125,6 @@ export const getFavorite = async (req: Request, res: Response<ApiResponse<Search
     });
   } catch (error) {
     console.log(error);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }
