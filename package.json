@@ -22,6 +22,8 @@
     "jsonwebtoken": "^9.0.3",
     "node-cron": "^4.2.1",
     "pg": "^8.18.0",
+    "react-email": "^6.0.0",
+    "resend": "^6.12.2",
     "slugify": "^1.6.8",
     "stripe": "^21.0.0",
     "uuid": "^13.0.0"
