@@ -21,6 +21,7 @@ import { verifyUser } from '../services/auth.service.js';
 import { createAdminRequest, deleteAdminRequestByUserId } from '../services/admin.service.js';
 import { getAdminTokenByToken, deleteAdminTokenByToken, finalizeUserRegistration } from '../services/auth.service.js';
 import { ActionType } from '../types/types.js';
+//test vercel
 export const googleSignIn = async (req: Request<{ token: string }>, res: Response<ApiResponse<SignInResponse>>) => {
   try {
     const { token } = req.body;
