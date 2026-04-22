@@ -40,8 +40,4 @@ app.use('/booking', bookingRoutes)
 app.use('/site', siteRoutes)
 app.use('/admin', adminRoutes)
 
-app.listen(port, () => {
-  prisma.$connect()
-    .then(() => console.log('Database connected successfully via Prisma!'))
-    .catch((err) => console.error('Database connection failed:', err));
-});
+module.exports = app;
