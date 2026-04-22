@@ -4,11 +4,12 @@ import { ResetPasswordEmail } from '../emails/reset-pass.js';
 import { BookingConfirmedEmail } from '../emails/booking-confirmed.js';
 import { HostApproved } from '../emails/host-approved.js';
 import { AdminInviteEmail } from '../emails/admin-Invite.js';
-import { PrismaClient, EmailLogCategory, EmailLogStatus } from "@prisma/client";
+import pkg from '@prisma/client';
 import { prisma } from '../lib/db.js';
 import { JSX } from 'react';
 import crypto from 'crypto';
 import { createAdminToken, deleteAdminTokensByEmail } from './auth.service.js';
+const { EmailLogCategory, EmailLogStatus } = pkg;
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
