@@ -3,7 +3,7 @@ import { prisma } from '../lib/db.js';
 import { EmailLogStatus } from '@prisma/client';
 import { syncEmailStatus } from '../services/mail.service.js';
 
-cron.schedule('*/1 * * * *', async () => {
+cron.schedule('*/5 * * * *', async () => {
     console.log('[Cron Job] Syncing pending email statuses from Resend...');
     try {
         const pendingLogs = await prisma.email_logs.findMany({
