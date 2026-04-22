@@ -22,8 +22,22 @@ dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001;
+const allowedOrigins = [
+  process.env.FRONTEND_DOMAIN
+];
+app.use(cors({
 
-app.use(cors());
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+  
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 app.use('/webhook', webhookRoutes);
 
 app.use(express.json());
