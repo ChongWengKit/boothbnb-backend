@@ -8,7 +8,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: '2026-03-25.dahlia',
 });
 
-cron.schedule('*/5 * * * *', async () => {
+export async function runBookingCleanup() {
     console.log('[Cron Job] Syncing Stripe & Checking Timeouts...');
     const TIMEOUT_MS = 15 * 60 * 1000;
     const now = new Date();
@@ -63,4 +63,6 @@ cron.schedule('*/5 * * * *', async () => {
     } catch (error) {
         console.error('[Cron Job] General error:', error);
     }
-});
+}
+
+cron.schedule('*/5 * * * *', runBookingCleanup);

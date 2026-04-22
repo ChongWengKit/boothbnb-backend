@@ -11,5 +11,19 @@
       "src": "/(.*)",
       "dest": "src/index.js"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/booking-cleanup",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/email-retry",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/email-sync",
+      "schedule": "*/5 * * * *"
+    }
   ]
 }

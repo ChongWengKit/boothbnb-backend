@@ -3,7 +3,7 @@ import { prisma } from '../lib/db.js';
 import { EmailLogStatus } from '@prisma/client';
 import { attemptSend } from '../services/mail.service.js';
 
-cron.schedule('*/5 * * * *', async () => {
+export async function runEmailRetry() {
     console.log('[Cron Job] Retrying failed API email requests...');
     try {
         const failedLogs = await prisma.email_logs.findMany({
@@ -20,4 +20,6 @@ cron.schedule('*/5 * * * *', async () => {
     } catch (error) {
         console.error('[Cron Job] Error in email retry job:', (error as Error).message);
     }
-});
+}
+
+cron.schedule('*/5 * * * *', runEmailRetry);

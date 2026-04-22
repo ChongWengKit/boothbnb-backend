@@ -17,6 +17,7 @@
     "@prisma/client": "^6.19.2",
     "@react-email/components": "^1.0.12",
     "@stripe/stripe-js": "^9.0.0",
+    "@vercel/node": "^5.7.13",
     "cloudinary": "^2.9.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
