@@ -1,11 +1,19 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "@vercel/node@5.0.0",
-      "includeFiles": "api/**"
+  "builds": [
+    {
+      "src": "src/index.ts",
+      "use": "@vercel/node"
     }
-  },
-  "rewrites": [{ "source": "/(.*)", "destination": "/api/index.js" }]
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "src/index.ts"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "dist/index.js"
+    }
+  ]
 }
