@@ -55,4 +55,4 @@ app.use('/booking', bookingRoutes)
 app.use('/site', siteRoutes)
 app.use('/admin', adminRoutes)
 
-export default app;
+module.exports = app;
