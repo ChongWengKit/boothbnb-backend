@@ -10,16 +10,6 @@
       "use": "@vercel/node"
     }
   ],
-  "routes": [
-    {
-      "src": "/api/cron/(.*)",
-      "dest": "api/cron/$1.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "src/index.js"
-    }
-  ],
   "crons": [
     {
       "path": "/api/cron/booking-cleanup",
