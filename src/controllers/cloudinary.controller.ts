@@ -18,7 +18,7 @@ export const generateCloudinarySignatureAction = async (req: Request<{}, {}, Clo
   try {
     const paramsToSign = req.body;
     if (!paramsToSign.timestamp || !paramsToSign.folder) {
-      throw new Error("Invalid parameters")
+      return res.status(400).json({ success: false, message: 'Invalid parameters' });
     }
     cloudinary.config({
       cloud_name: CLOUDINARY_CLOUD_NAME,
@@ -48,4 +48,3 @@ export const generateCloudinarySignatureAction = async (req: Request<{}, {}, Clo
 
   }
 };
-

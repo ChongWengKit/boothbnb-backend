@@ -14,11 +14,9 @@ export const checkAuthenticationToken = (req: Request, res: Response, next: Next
 
   try {
     const decodedToken = jwt.verify(authenticationToken, secret);
-    console.log("Decoded token:", decodedToken);
     req.user = decodedToken as User;
     next();
   } catch (error) {
-    console.log("Token verification failed:", error);
     res.setHeader('Content-Type', 'application/json');
     return res.status(401).json({ success: false, message: 'Invalid or expired authentication token.' });
   }

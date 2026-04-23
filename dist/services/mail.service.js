@@ -108,7 +108,6 @@ export const attemptSend = async (logId) => {
         });
     }
     catch (e) {
-        console.error(`Attempt ${currentAttempts} failed for log ${log.id}:`, e.message);
         return await prisma.email_logs.update({
             where: { id: log.id },
             data: {
@@ -159,11 +158,8 @@ export const syncEmailStatus = async (emailId) => {
     try {
         const { data, error } = await resend.emails.get(emailId);
         if (error || !data) {
-            if (error)
-                console.error(`Resend API error for ${emailId}:`, error.message);
             return;
         }
-        console.log(`Fetched status for ${emailId}:`, data);
         let newStatus = null;
         if (data.last_event === 'sent' || data.last_event === 'delivered') {
             newStatus = EmailLogStatus.SUCCESSFUL;
@@ -179,7 +175,6 @@ export const syncEmailStatus = async (emailId) => {
         }
     }
     catch (e) {
-        console.error(`Unexpected error syncing status for ${emailId}:`, e.message);
     }
 };
 export const getEmailLogById = async (id) => {

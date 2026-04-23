@@ -49,7 +49,6 @@ export const getEmailLogs = async (req: Request, res: Response) => {
             meta: logs.meta
         });
     } catch (error) {
-        console.error('Error fetching email logs:', error);
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };

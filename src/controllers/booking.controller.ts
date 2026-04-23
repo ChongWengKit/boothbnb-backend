@@ -30,7 +30,7 @@ export const getUserBookings = async (req: Request, res: Response<ApiResponse<an
             }
         });
     } catch (error) {
-        console.log(error)
+        
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
@@ -61,7 +61,7 @@ export const getUserPaidBookings = async (req: Request, res: Response<ApiRespons
             }
         });
     } catch (error) {
-        console.log(error)
+        
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };

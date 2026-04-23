@@ -40,7 +40,7 @@ export const updateAdminApproval = async (req: Request<UpdateAdminRequestParams>
   try {
     const { id, status } = req.body;
     if (!id || !status) {
-      throw new Error("Invalid parameters");
+      return res.status(400).json({ success: false, message: 'Invalid parameters.' });
     }
     const result = await updateAdminRequest(id, status);
     if (result.action_type === ActionType.HOST_APPROVAL) {
@@ -48,7 +48,7 @@ export const updateAdminApproval = async (req: Request<UpdateAdminRequestParams>
       if (status === AdminRequestStatus.APPROVED) {
         const user = await findUserById(result.user_id);
         if (!user) {
-          throw new Error(`User with id ${result.user_id} does not exist`);
+          return res.status(404).json({ success: false, message: `User with id ${result.user_id} does not exist` });
         }
         await verifyUser(result.user_id);
         await sendHostApproveMail(user.id, user.username, user.email);
@@ -67,7 +67,6 @@ export const updateAdminApproval = async (req: Request<UpdateAdminRequestParams>
 export const getApprovalRequests = async (req: Request<{}>, res: Response<ApiResponse<any>>) => {
   try {
     const { page = 1, limit = 10, action_type, search, status } = req.query;
-    console.log(req.query)
     const requests = await getAdminRequests(Number(page), Number(limit), action_type as ActionType, search as string, status as AdminRequestStatus);
     return res.status(200).json({
       success: true,

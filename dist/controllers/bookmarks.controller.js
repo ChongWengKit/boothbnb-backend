@@ -9,7 +9,7 @@ export const addFavorite = async (req, res) => {
         }
         const userId = req.user.id;
         if (!userId || !eventId) {
-            throw new Error('Invalid Request.');
+            return res.status(400).json({ success: false, message: 'Invalid Request.' });
         }
         await createBookmark(parseInt(userId), parseInt(eventId));
         return res.status(201).json({
@@ -18,7 +18,7 @@ export const addFavorite = async (req, res) => {
         });
     }
     catch (error) {
-        console.log(error);
+        ;
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
@@ -30,7 +30,7 @@ export const deleteFavorite = async (req, res) => {
         }
         const userId = req.user.id;
         if (!userId || !eventId) {
-            throw new Error('Invalid Request.');
+            return res.status(400).json({ success: false, message: 'Invalid Request.' });
         }
         await deleteBookmark(parseInt(userId), parseInt(eventId));
         return res.status(200).json({
@@ -49,7 +49,7 @@ export const getFavoriteBookmarkId = async (req, res) => {
         }
         const userId = req.user.id;
         if (!userId) {
-            throw new Error('Invalid Request.');
+            return res.status(400).json({ success: false, message: 'Invalid Request.' });
         }
         const bookmarks = await findBookmarkIdkByUserId(parseInt(userId));
         const bookmarkIds = bookmarks.map(b => b.event_id);
@@ -60,7 +60,7 @@ export const getFavoriteBookmarkId = async (req, res) => {
         });
     }
     catch (error) {
-        console.log(error);
+        ;
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
@@ -73,7 +73,7 @@ export const getFavorite = async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         if (!userId) {
-            throw new Error('Invalid Request.');
+            return res.status(400).json({ success: false, message: 'Invalid Request.' });
         }
         const { bookmarks, total } = await findBookmarkByUserId(parseInt(userId), page, limit);
         const formattedEvents = bookmarks.map((item) => {
@@ -113,7 +113,7 @@ export const getFavorite = async (req, res) => {
         });
     }
     catch (error) {
-        console.log(error);
+        ;
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };

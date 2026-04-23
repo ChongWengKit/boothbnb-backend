@@ -13,7 +13,7 @@ export const addFavorite = async (req: Request, res: Response<ApiResponse<{}>>) 
     }
     const userId = req.user.id;
     if (!userId || !eventId) {
-      throw new Error('Invalid Request.');
+      return res.status(400).json({ success: false, message: 'Invalid Request.' });
     }
     await createBookmark(parseInt(userId), parseInt(eventId));
 
@@ -22,7 +22,7 @@ export const addFavorite = async (req: Request, res: Response<ApiResponse<{}>>) 
       message: 'Bookmark successfully.',
     });
   } catch (error) {
-    console.log(error);
+    ;
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }
@@ -35,7 +35,7 @@ export const deleteFavorite = async (req: Request, res: Response<ApiResponse<{}>
     }
     const userId = req.user.id;
     if (!userId || !eventId) {
-      throw new Error('Invalid Request.');
+      return res.status(400).json({ success: false, message: 'Invalid Request.' });
     }
     await deleteBookmark(parseInt(userId), parseInt(eventId));
 
@@ -55,7 +55,7 @@ export const getFavoriteBookmarkId = async (req: Request, res: Response<ApiRespo
     }
     const userId = req.user.id;
     if (!userId) {
-      throw new Error('Invalid Request.');
+      return res.status(400).json({ success: false, message: 'Invalid Request.' });
     }
     const bookmarks = await findBookmarkIdkByUserId(parseInt(userId));
     const bookmarkIds = bookmarks.map(b => b.event_id);
@@ -65,7 +65,7 @@ export const getFavoriteBookmarkId = async (req: Request, res: Response<ApiRespo
       data: bookmarkIds,
     });
   } catch (error) {
-    console.log(error);
+    ;
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }
@@ -79,7 +79,7 @@ export const getFavorite = async (req: Request, res: Response<ApiResponse<Search
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     if (!userId) {
-      throw new Error('Invalid Request.');
+      return res.status(400).json({ success: false, message: 'Invalid Request.' });
     }
     const { bookmarks, total } = await findBookmarkByUserId(parseInt(userId), page, limit);
 
@@ -124,7 +124,7 @@ export const getFavorite = async (req: Request, res: Response<ApiResponse<Search
       }
     });
   } catch (error) {
-    console.log(error);
+    ;
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }

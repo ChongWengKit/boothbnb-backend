@@ -26,7 +26,7 @@ export const googleSignIn = async (req: Request<{ token: string }>, res: Respons
   try {
     const { token } = req.body;
     if (!token) {
-      throw new Error('Token is required.');
+      return res.status(400).json({ success: false, message: 'Token is required.' });
     }
 
     const url = `https://oauth2.googleapis.com/tokeninfo?id_token=${token}`;
@@ -34,27 +34,27 @@ export const googleSignIn = async (req: Request<{ token: string }>, res: Respons
     const data = await response.json();
     const { iat, exp } = data;
     if (!iat || !exp || exp < Date.now() / 1000) {
-      throw new Error('Invalid or expired token.');
+      return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
     }
     const googleClientId = process.env.GOOGLE_CLIENT_ID;
     if (googleClientId !== data.aud || googleClientId !== data.azp) {
-      throw new Error('Unauthorized.');
+      return res.status(401).json({ success: false, message: 'Unauthorized.' });
     }
     const email = data.email;
 
     let user = await findUserByEmail(email);
     if (!user) {
-      throw new Error('User does not exist. Please sign up first.');
+      return res.status(404).json({ success: false, message: 'User does not exist. Please sign up first.' });
     }
     else {
       if (user.password !== null && user.salt !== null) {
-        throw new Error('Please sign in with email and password.');
+        return res.status(400).json({ success: false, message: 'Please sign in with email and password.' });
       }
     }
 
     const secret = process.env.JWT_SECRET;
     if (!secret) {
-      throw new Error('JWT_SECRET is not defined.');
+      return res.status(500).json({ success: false, message: 'JWT_SECRET is not defined.' });
     }
 
     const authenticationToken = jwt.sign({
@@ -89,7 +89,7 @@ export const googleSignUp = async (req: Request<{ token: string, role: Role }>, 
   try {
     const { token, role } = req.body;
     if (!token) {
-      throw new Error('Token is required.');
+      return res.status(400).json({ success: false, message: 'Token is required.' });
     }
 
     const url = `https://oauth2.googleapis.com/tokeninfo?id_token=${token}`;
@@ -97,11 +97,11 @@ export const googleSignUp = async (req: Request<{ token: string, role: Role }>, 
     const data = await response.json();
     const { iat, exp } = data;
     if (!iat || !exp || exp < Date.now() / 1000) {
-      throw new Error('Invalid or expired token.');
+      return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
     }
     const googleClientId = process.env.GOOGLE_CLIENT_ID;
     if (googleClientId !== data.aud || googleClientId !== data.azp) {
-      throw new Error('Unauthorized.');
+      return res.status(401).json({ success: false, message: 'Unauthorized.' });
     }
     const email = data.email;
     const name = data.name;
@@ -110,7 +110,7 @@ export const googleSignUp = async (req: Request<{ token: string, role: Role }>, 
     const allowedRoles = [Role.HOST, Role.VENDOR];
 
     if (!allowedRoles.includes(role)) {
-      throw new Error('Invalid role.');
+      return res.status(400).json({ success: false, message: 'Invalid role.' });
     }
     if (!user) {
       let profile_photo = photo;
@@ -127,7 +127,6 @@ export const googleSignUp = async (req: Request<{ token: string, role: Role }>, 
           });
           profile_photo = uploadResponse.secure_url;
         } catch (uploadError) {
-          console.error('Cloudinary upload failed, falling back to Google URL:', uploadError);
         }
       }
 
@@ -140,7 +139,7 @@ export const googleSignUp = async (req: Request<{ token: string, role: Role }>, 
       });
     }
     else {
-      throw new Error('User already exists. Please sign in instead.');
+      return res.status(409).json({ success: false, message: 'User already exists. Please sign in instead.' });
     }
     if (role === Role.HOST) {
       await createAdminRequest(ActionType.HOST_APPROVAL, user.id);
@@ -157,7 +156,7 @@ export const googleSignUp = async (req: Request<{ token: string, role: Role }>, 
     }
     const secret = process.env.JWT_SECRET;
     if (!secret) {
-      throw new Error('JWT_SECRET is not defined.');
+      return res.status(500).json({ success: false, message: 'JWT_SECRET is not defined.' });
     }
 
     const authenticationToken = jwt.sign({
@@ -192,22 +191,22 @@ export const resetPassword = async (req: Request<{ password: string, token: stri
   try {
     const { password, token } = req.body;
     if (!password || !token) {
-      throw new Error('Password and token are required.');
+      return res.status(400).json({ success: false, message: 'Password and token are required.' });
     }
 
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
     const resetToken = await getResetTokenByToken(hashedToken);
     if (!resetToken) {
-      throw new Error('Token not found.');
+      return res.status(404).json({ success: false, message: 'Token not found.' });
     }
 
     if (new Date(resetToken.expires_in) < new Date()) {
-      throw new Error('Token has expired.');
+      return res.status(401).json({ success: false, message: 'Token has expired.' });
     }
 
     const user = await findUserById(resetToken.user_id);
     if (!user) {
-      throw new Error('User not found.');
+      return res.status(404).json({ success: false, message: 'User not found.' });
     }
 
     const salt = crypto.randomBytes(16).toString('hex');
@@ -215,7 +214,7 @@ export const resetPassword = async (req: Request<{ password: string, token: stri
 
     const updatedUser = await updateUserPassword(resetToken.user_id, hashedPassword, salt);
     if (!updatedUser) {
-      throw new Error('Failed to update user password.');
+      return res.status(500).json({ success: false, message: 'Failed to update user password.' });
     }
 
     await deleteResetTokenByToken(hashedToken);
@@ -278,26 +277,26 @@ export const signin = async (req: Request<{}, {}, SignInRequest>, res: Response<
   const secret = process.env.JWT_SECRET;
   try {
     if (!secret) {
-      throw new Error('JWT_SECRET is not defined.');
+      return res.status(500).json({ success: false, message: 'JWT_SECRET is not defined.' });
     }
 
     if (!email || !password) {
-      throw new Error('Email and password are required.');
+      return res.status(400).json({ success: false, message: 'Email and password are required.' });
     }
 
     const user = await findUserByEmail(email);
     if (!user) {
-      throw new Error('User not found.');
+      return res.status(404).json({ success: false, message: 'User not found.' });
     }
     if (user.is_verified === false) {
-      throw new Error('Email not verified. Please verify your email before signing in.');
+      return res.status(403).json({ success: false, message: 'Email not verified. Please verify your email before signing in.' });
     }
     if (user.password === null || user.salt === null) {
-      throw new Error('Password is incorrect.');
+      return res.status(401).json({ success: false, message: 'Password is incorrect.' });
     }
     const hashedPassword = crypto.pbkdf2Sync(password, user.salt, 1000, 64, 'sha512').toString('hex');
     if (hashedPassword !== user.password) {
-      throw new Error('Password is incorrect.');
+      return res.status(401).json({ success: false, message: 'Password is incorrect.' });
     }
 
     const token = jwt.sign({
@@ -409,27 +408,24 @@ export const signup = async (req: Request<{}, {}, SignupRequest>, res: Response<
     });
 
   } catch (error) {
-    console.error('Signup error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
 export const forgotPassword = async (req: Request<{ email: string }>, res: Response<ApiResponse<{}>>) => {
   try {
-    console.log('Forgot password request body:', req.body);
     const { email } = req.body;
     if (!email) {
-      throw new Error('Email is required.');
+      return res.status(400).json({ success: false, message: 'Email is required.' });
     }
 
     const user = await findUserByEmail(email);
     if (!user) {
-      throw new Error('User with email does not exist.');
+      return res.status(404).json({ success: false, message: 'User with email does not exist.' });
     }
     await sendResetPasswordMail(email, user.username, user.id);
     return res.status(200).json({ success: true, message: 'Reset password email sent successfully.' });
   } catch (error) {
-    console.log('Forgot password error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
@@ -439,21 +435,21 @@ export const verify = async (req: Request, res: Response<ApiResponse<{ authentic
     const { token } = req.body;
     const secret = process.env.JWT_SECRET;
     if (!secret) {
-      throw new Error('JWT_SECRET is not defined.');
+      return res.status(500).json({ success: false, message: 'JWT_SECRET is not defined.' });
     }
 
     if (!token) {
-      throw new Error('Token is required.');
+      return res.status(400).json({ success: false, message: 'Token is required.' });
     }
 
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
     const verifyToken = await getVerifyTokenByToken(hashedToken);
     if (!verifyToken) {
-      throw new Error('Token not found.');
+      return res.status(404).json({ success: false, message: 'Token not found.' });
     }
 
     if (new Date(verifyToken.expires_in) < new Date()) {
-      throw new Error('Token has expired.');
+      return res.status(401).json({ success: false, message: 'Token has expired.' });
     }
     const user = await verifyUser(verifyToken.user_id);
 

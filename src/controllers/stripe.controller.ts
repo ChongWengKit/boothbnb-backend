@@ -81,7 +81,6 @@ export const checkStripeStatus = async (req: Request, res: Response) => {
 };
 
 export const handleStripeWebhook = async (req: Request, res: Response) => {
-    console.log("IN")
     const sig = req.headers['stripe-signature'];
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
     if (!sig || !endpointSecret) {
@@ -94,7 +93,6 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
         event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
 
     } catch (err) {
-        console.error(`Webhook signature verification failed: ${(err as Error).message}`);
         return res.status(400).send(`Webhook Error: ${(err as Error).message}`);
     }
     try {
@@ -127,7 +125,6 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
                     const userId = parseInt(metadata.userId);
                     await emailService.sendBookingConfirmedMail(userEmail, userName, eventTitle, boothName, bookingId, userId);
                 }
-                console.log(`[Stripe Webhook] Payment confirmed for Booking ID: ${bookingId}`);
             }
         }
         else if (event.type === 'checkout.session.expired') {
