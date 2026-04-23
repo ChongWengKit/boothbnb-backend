@@ -14,6 +14,7 @@ import stripeRoutes from './routes/stripe.routes.js';
 import bookingRoutes from './routes/booking.routes.js';
 import siteRoutes from './routes/site.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import cronRoutes from './routes/cron.routes.js';
 
 import './job/booking-cleanup.js';
 import './job/email-retry.js';
@@ -38,7 +39,7 @@ app.use(cors({
   },
   credentials: true
 }));
-app.options('*', cors());
+app.options(/^(.*)$/, cors());
 app.use('/webhook', webhookRoutes);
 
 app.use(express.json());
@@ -54,5 +55,12 @@ app.use('/stripe', stripeRoutes)
 app.use('/booking', bookingRoutes)
 app.use('/site', siteRoutes)
 app.use('/admin', adminRoutes)
+app.use('/cron', cronRoutes); 
 
-module.exports = app;
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+  });
+}
+
+export default app;
