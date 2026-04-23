@@ -38,7 +38,7 @@ app.use(cors({
   },
   credentials: true
 }));
-app.options('(.*)', cors());
+app.options(/^(.*)$/, cors());
 app.use('/webhook', webhookRoutes);
 
 app.use(express.json());
