@@ -2,11 +2,6 @@ node_modules
 .env
 .env.local
 .next
-*.js
-*.js.map
-*.d.ts
-*.d.ts.map
-*.tsbuildinfo
 
 build/
 out/
