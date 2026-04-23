@@ -13,6 +13,7 @@ import stripeRoutes from './routes/stripe.routes.js';
 import bookingRoutes from './routes/booking.routes.js';
 import siteRoutes from './routes/site.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import cronRoutes from './routes/cron.routes.js';
 import './job/booking-cleanup.js';
 import './job/email-retry.js';
 import './job/email-sync.js';
@@ -49,5 +50,6 @@ app.use('/stripe', stripeRoutes);
 app.use('/booking', bookingRoutes);
 app.use('/site', siteRoutes);
 app.use('/admin', adminRoutes);
+app.use('/cron', cronRoutes);
 export default app;
 //# sourceMappingURL=index.js.map
