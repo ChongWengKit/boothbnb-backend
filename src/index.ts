@@ -1,9 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-
-dotenv.config(); // Load environment variables first
-
 import { prisma } from './lib/db.js';
 import authRoutes from './routes/auth.routes.js';
 import eventRoutes from './routes/event.routes.js';
@@ -17,12 +14,12 @@ import stripeRoutes from './routes/stripe.routes.js';
 import bookingRoutes from './routes/booking.routes.js';
 import siteRoutes from './routes/site.routes.js';
 import adminRoutes from './routes/admin.routes.js';
-import cronRoutes from './routes/cron.routes.js';
 
 import './job/booking-cleanup.js';
 import './job/email-retry.js';
 import './job/email-sync.js';
-//test
+dotenv.config();
+
 const app = express();
 const port = process.env.PORT || 3001;
 const allowedOrigins = [
@@ -41,20 +38,10 @@ app.use(cors({
   },
   credentials: true
 }));
-app.options(/^(.*)$/, cors());
-
-app.get('/', (req, res) => {
-  res.json({ status: 'ok', message: 'Boothbnb API is running' });
-});
-
-// Middleware for Stripe webhooks to get raw body for signature verification
-// This MUST come BEFORE express.json() if the webhook expects a raw body
-app.use('/stripe/webhook', express.raw({ type: 'application/json' }));
+app.options('*', cors());
+app.use('/webhook', webhookRoutes);
 
 app.use(express.json());
-
-// Other webhooks that expect JSON body (like Resend)
-app.use('/webhook', webhookRoutes);
 
 app.use('/auth', authRoutes);
 app.use('/event', eventRoutes);
@@ -63,34 +50,9 @@ app.use('/bookmark', bookmarkRoutes);
 app.use('/upload', uploadRoutes);
 app.use('/account', accountRoutes)
 app.use('/payment', paymentRoutes)
-// All other Stripe routes (non-webhook)
-app.use('/stripe', stripeRoutes) 
+app.use('/stripe', stripeRoutes)
 app.use('/booking', bookingRoutes)
 app.use('/site', siteRoutes)
 app.use('/admin', adminRoutes)
-app.use('/cron', cronRoutes); 
 
-// 404 Handler - Catch all routes that aren't defined above
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Route ${req.originalUrl} not found`
-  });
-});
-
-// Global Error Handler
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Unhandled Error:', err);
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || 'Internal server error'
-  });
-});
-
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-  });
-}
-
-export default app;
+module.exports = app;
