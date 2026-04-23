@@ -2,8 +2,9 @@
   "version": 2,
   "buildCommand": "npm run build",
   "functions": {
-    "api/index.js": {
-      "runtime": "@vercel/node@5.0.0"
+    "api/**/*.js": {
+      "runtime": "@vercel/node@5.0.0",
+      "includeFiles": "api/**"
     }
   },
   "rewrites": [{ "source": "/(.*)", "destination": "/api/index.js" }]
