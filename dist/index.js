@@ -35,7 +35,7 @@ app.use(cors({
     },
     credentials: true
 }));
-app.options(/^(.*)$/, cors());
+app.options('*splat', cors());
 app.use('/webhook', webhookRoutes);
 app.use(express.json());
 app.use('/auth', authRoutes);
