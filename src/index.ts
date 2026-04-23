@@ -22,7 +22,7 @@ import cronRoutes from './routes/cron.routes.js';
 import './job/booking-cleanup.js';
 import './job/email-retry.js';
 import './job/email-sync.js';
-
+//test
 const app = express();
 const port = process.env.PORT || 3001;
 const allowedOrigins = [
