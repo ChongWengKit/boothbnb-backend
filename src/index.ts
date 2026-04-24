@@ -55,4 +55,5 @@ app.use('/booking', bookingRoutes)
 app.use('/site', siteRoutes)
 app.use('/admin', adminRoutes)
 app.use('/cron', cronRoutes)
+
 export default app;

@@ -70,7 +70,7 @@ export const searchEvents = async (req: Request, res: Response<ApiResponse<Searc
             }
         });
     } catch (error) {
-        
+
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 }
@@ -103,8 +103,14 @@ export const createEvent = async (req: Request<{}, {}, CreateEventRequest>, res:
             !eventData.latitude ||
             !eventData.address ||
             !eventData.description ||
+            eventData.title.length < 3 ||
             eventData.title.length > 100 ||
-            eventData.description.length > 2000
+            eventData.description.length < 10 ||
+            eventData.description.length > 2000 ||
+            isNaN(new Date(eventData.start_date).getTime()) ||
+            isNaN(new Date(eventData.end_date).getTime()) ||
+            new Date(eventData.start_date) < new Date() ||
+            new Date(eventData.end_date) <= new Date(eventData.start_date)
         ) {
             return res.status(400).json({ success: false, message: 'Missing or invalid event fields.' });
         }
@@ -144,7 +150,26 @@ export const updateEvent = async (req: Request<{ slug: string }, {}, UpdateEvent
         if (event.host_id !== hostId) {
             return res.status(403).json({ success: false, message: 'Forbidden. You do not own this event.' });
         }
-
+        if (
+            !updateData.title ||
+            !updateData.start_date ||
+            !updateData.end_date ||
+            !updateData.category ||
+            !updateData.longitude ||
+            !updateData.latitude ||
+            !updateData.address ||
+            !updateData.description ||
+            updateData.title.length < 3 ||
+            updateData.title.length > 100 ||
+            updateData.description.length < 10 ||
+            updateData.description.length > 2000 ||
+            isNaN(new Date(updateData.start_date).getTime()) ||
+            isNaN(new Date(updateData.end_date).getTime()) ||
+            new Date(updateData.start_date) < new Date() ||
+            new Date(updateData.end_date) <= new Date(updateData.start_date)
+        ) {
+            return res.status(400).json({ success: false, message: 'Missing or invalid event fields.' });
+        }
         await eventService.updateEvent(event.id, updateData);
 
         return res.status(200).json({ success: true, message: 'Event updated successfully' });
@@ -207,7 +232,7 @@ export const closeEvent = async (req: Request<{ slug: string }>, res: Response<A
 
         return res.status(200).json({ success: true, message: 'Event Closed successfully' });
     } catch (error) {
-        
+
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 }
@@ -276,9 +301,8 @@ export const getEventBySlug = async (
 ) => {
     try {
         const { slug } = req.params;
-        if(!slug)
-        {
-             return res.status(404).json({
+        if (!slug) {
+            return res.status(404).json({
                 success: false,
                 message: 'Event not found'
             });
@@ -309,7 +333,7 @@ export const getEventBySlug = async (
                     if (secret) {
                         if (token) {
                             const decoded = jwt.verify(token, process.env.JWT_SECRET!) as unknown as User; userId = Number(decoded.id);
-                                                    userId = Number(decoded.id);
+                            userId = Number(decoded.id);
 
                         }
                     }
@@ -347,7 +371,7 @@ export const getEventBySlug = async (
             data: responseData
         });
     } catch (error) {
-        
+
         return res.status(500).json({ success: false, message: 'Internal server error' });
 
     }
@@ -359,8 +383,7 @@ export const getEventDetailsBySlug = async (
 ) => {
     try {
         const { slug } = req.params;
-        if(!slug)
-        {
+        if (!slug) {
             return res.status(404).json({ success: false, message: 'Forbidden. Only the host can view event details.' });
         }
         const event = await eventService.getEventDetailsBySlug(slug as string);
@@ -399,7 +422,7 @@ export const getEventDetailsBySlug = async (
         });
 
     } catch (error) {
-        
+
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
@@ -412,7 +435,7 @@ export const checkoutByUpdateEventReserved = async (
         const { eventId, boothId } = req.body;
         if (!req.user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
-        }        
+        }
         const vendorId = parseInt(req.user.id);
 
 
@@ -488,7 +511,7 @@ export const checkoutByUpdateEventReserved = async (
 
         return res.status(200).json({ success: true, message: 'Booth reserved successfully', data: session.url });
     } catch (error) {
-        
+
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 }
