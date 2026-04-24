@@ -292,11 +292,11 @@ export const signin = async (req: Request<{}, {}, SignInRequest>, res: Response<
       return res.status(403).json({ success: false, message: 'Email not verified. Please verify your email before signing in.' });
     }
     if (user.password === null || user.salt === null) {
-      return res.status(401).json({ success: false, message: 'Password is incorrect.' });
+      return res.status(400).json({ success: false, message: 'Password is incorrect.' });
     }
     const hashedPassword = crypto.pbkdf2Sync(password, user.salt, 1000, 64, 'sha512').toString('hex');
     if (hashedPassword !== user.password) {
-      return res.status(401).json({ success: false, message: 'Password is incorrect.' });
+      return res.status(400).json({ success: false, message: 'Password is incorrect.' });
     }
 
     const token = jwt.sign({
