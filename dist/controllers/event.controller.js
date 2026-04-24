@@ -90,8 +90,14 @@ export const createEvent = async (req, res) => {
             !eventData.latitude ||
             !eventData.address ||
             !eventData.description ||
+            eventData.title.length < 3 ||
             eventData.title.length > 100 ||
-            eventData.description.length > 2000) {
+            eventData.description.length < 10 ||
+            eventData.description.length > 2000 ||
+            isNaN(new Date(eventData.start_date).getTime()) ||
+            isNaN(new Date(eventData.end_date).getTime()) ||
+            new Date(eventData.start_date) < new Date() ||
+            new Date(eventData.end_date) <= new Date(eventData.start_date)) {
             return res.status(400).json({ success: false, message: 'Missing or invalid event fields.' });
         }
         const newEvent = await eventService.createEvent(parseInt(hostId), eventData);
@@ -123,6 +129,24 @@ export const updateEvent = async (req, res) => {
         }
         if (event.host_id !== hostId) {
             return res.status(403).json({ success: false, message: 'Forbidden. You do not own this event.' });
+        }
+        if (!updateData.title ||
+            !updateData.start_date ||
+            !updateData.end_date ||
+            !updateData.category ||
+            !updateData.longitude ||
+            !updateData.latitude ||
+            !updateData.address ||
+            !updateData.description ||
+            updateData.title.length < 3 ||
+            updateData.title.length > 100 ||
+            updateData.description.length < 10 ||
+            updateData.description.length > 2000 ||
+            isNaN(new Date(updateData.start_date).getTime()) ||
+            isNaN(new Date(updateData.end_date).getTime()) ||
+            new Date(updateData.start_date) < new Date() ||
+            new Date(updateData.end_date) <= new Date(updateData.start_date)) {
+            return res.status(400).json({ success: false, message: 'Missing or invalid event fields.' });
         }
         await eventService.updateEvent(event.id, updateData);
         return res.status(200).json({ success: true, message: 'Event updated successfully' });
