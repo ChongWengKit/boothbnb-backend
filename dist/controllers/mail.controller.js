@@ -54,6 +54,12 @@ export const resendEmail = async (req, res) => {
         }
         const emailLog = await getEmailLogById(parseInt(logId));
         if (emailLog) {
+            if (emailLog.status === EmailLogStatus.PENDING) {
+                return res.status(400).json({ success: false, message: 'Email is already pending' });
+            }
+            if (emailLog.status === EmailLogStatus.BOUNCED || emailLog.status === EmailLogStatus.COMPLAINED) {
+                return res.status(400).json({ success: false, message: 'Invalid Email' });
+            }
             await attemptSend(emailLog.id);
         }
         return res.status(200).json({ success: true, message: 'Email resent successfully' });

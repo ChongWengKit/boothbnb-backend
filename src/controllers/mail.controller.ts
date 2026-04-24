@@ -4,7 +4,7 @@ import { EmailLogCategory, EmailLogStatus } from '@prisma/client';
 import { updateEmailLogStatus } from '../services/mail.service.js';
 import { getEmailLogById, attemptSend, getAllEmailLogs } from '../services/mail.service.js';
 import { Category } from '@prisma/client';
-import {sendVerifyEmail, sendResetPasswordMail, sendBookingConfirmedMail, sendHostApproveMail} from '../services/mail.service.js';
+import { sendVerifyEmail, sendResetPasswordMail, sendBookingConfirmedMail, sendHostApproveMail } from '../services/mail.service.js';
 export const handleResendWebhook = async (req: Request, res: Response) => {
     try {
         const { type, data } = req.body;
@@ -30,7 +30,7 @@ export const handleResendWebhook = async (req: Request, res: Response) => {
 
         return res.status(200).json({ received: true });
     } catch (error) {
-            return res.status(500).json({ success: false, message: 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
 
@@ -60,7 +60,14 @@ export const resendEmail = async (req: Request<{ logId: string }>, res: Response
         }
 
         const emailLog = await getEmailLogById(parseInt(logId))
-        if(emailLog){
+
+        if (emailLog) {
+            if (emailLog.status === EmailLogStatus.PENDING ) {
+                return res.status(400).json({ success: false, message: 'Email is already pending' });
+            }
+            if (emailLog.status === EmailLogStatus.BOUNCED || emailLog.status === EmailLogStatus.COMPLAINED) {
+                return res.status(400).json({ success: false, message: 'Invalid Email' });
+            }
             await attemptSend(emailLog.id);
         }
 
