@@ -84,6 +84,7 @@ export interface CreateEventRequest {
         width: number;
         height: number;
         rotation: number;
+        description: string | undefined;
     }>;
 }
 export interface UpdateEventRequest {
@@ -103,6 +104,7 @@ export interface UpdateEventRequest {
         width: number;
         height: number;
         rotation: number;
+        description?: string;
     }>;
     start_date?: string;
     end_date?: string;

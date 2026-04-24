@@ -104,7 +104,8 @@ export const createEvent = async (hostId, data) => {
                     y: booth.y,
                     width: booth.width,
                     height: booth.height,
-                    rotation: booth.rotation
+                    rotation: booth.rotation,
+                    description: booth.description ?? null
                 }))
             },
         },
@@ -252,7 +253,8 @@ export const updateEvent = async (id, data) => {
                 y: booth.y,
                 width: booth.width,
                 height: booth.height,
-                rotation: booth.rotation
+                rotation: booth.rotation,
+                description: booth.description ?? null
             }))
         };
     }
