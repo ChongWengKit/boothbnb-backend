@@ -195,4 +195,18 @@ export declare const updateUserStripeStatus: (user_id: number, charges_enabled: 
     stripe_payout_enabled: boolean;
     profile_photo: string | null;
 }>;
+export declare const updateUserProfilePhoto: (userId: number, url: string) => Promise<{
+    id: number;
+    email: string;
+    username: string;
+    password: string | null;
+    salt: string | null;
+    is_verified: boolean;
+    created_at: Date;
+    updated_at: Date;
+    role: import("@prisma/client").$Enums.Role;
+    stripe_account_id: string | null;
+    stripe_payout_enabled: boolean;
+    profile_photo: string | null;
+}>;
 //# sourceMappingURL=auth.service.d.ts.map

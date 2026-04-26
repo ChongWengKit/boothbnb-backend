@@ -122,4 +122,24 @@ export const getPublicAccount = async (req, res) => {
         return res.status(500).json({ success: false, message: 'Internal server error processing' });
     }
 };
+export const updateProfilePhoto = async (req, res) => {
+    try {
+        const { profile_photo } = req.body;
+        if (!req.user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+        if (!profile_photo) {
+            return res.status(400).json({ success: false, message: 'Photo URL is required.' });
+        }
+        const userId = parseInt(req.user.id);
+        await authService.updateUserProfilePhoto(userId, profile_photo);
+        return res.status(200).json({
+            success: true,
+            message: 'Profile photo updated successfully.',
+        });
+    }
+    catch (error) {
+        return res.status(500).json({ success: false, message: 'Internal server error updating profile photo' });
+    }
+};
 //# sourceMappingURL=account.controller.js.map

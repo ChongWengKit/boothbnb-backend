@@ -127,4 +127,12 @@ export const updateUserStripeStatus = async (user_id, charges_enabled) => {
         }
     });
 };
+export const updateUserProfilePhoto = async (userId, url) => {
+    return prisma.users.update({
+        where: { id: userId },
+        data: {
+            profile_photo: url
+        }
+    });
+};
 //# sourceMappingURL=auth.service.js.map

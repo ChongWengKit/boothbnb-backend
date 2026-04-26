@@ -144,3 +144,12 @@ export const updateUserStripeStatus = async (user_id: number, charges_enabled: b
     }
   });
 }
+
+export const updateUserProfilePhoto = async (userId: number, url: string) => {
+  return prisma.users.update({
+    where: { id: userId },
+    data: {
+      profile_photo: url
+    }
+  });
+};
