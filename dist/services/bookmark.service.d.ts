@@ -34,6 +34,7 @@ export declare const findBookmarkByUserId: (user_id: number, page?: number, limi
             latitude: number;
             longitude: number;
             slug: string;
+            currency_code: string;
             host_id: number;
         };
     } & {

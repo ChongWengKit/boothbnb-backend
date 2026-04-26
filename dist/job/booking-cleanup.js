@@ -30,6 +30,29 @@ export async function runBookingCleanup() {
                         receiptUrl: charge?.receipt_url ?? '',
                     });
                     await eventService.confirmUpdateBoothStatus(booking.booth_id, BoothType.SOLD);
+                    /*
+                    if (hostStripeAccount && paymentIntent && !paymentIntent.transfer_group) {
+                        
+                    
+                        const amount = event.booths.find(booth => booth.id === booking.booth_id)?.price;
+                        console.log(amount)
+                        if (amount) {
+                            try {
+                                const transferAmount = Math.round(Number(amount));
+                                const process = await stripe.transfers.create({
+                                    amount: transferAmount,
+                                    currency: event.currency_code,
+                                    destination: hostStripeAccount,
+                                    transfer_group: `booking_${booking.id}`,
+                                });
+                            } catch (transferError) {
+                                if ((transferError as any).code === 'balance_insufficient') {
+                                    const balance = await stripe.balance.retrieve();
+                                }
+                            }
+                        }
+                    }
+                    */
                     continue;
                 }
                 if (session.status === 'expired' || isTimedOut) {

@@ -14,9 +14,11 @@ import bookingRoutes from './routes/booking.routes.js';
 import siteRoutes from './routes/site.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import cronRoutes from './routes/cron.routes.js';
+import currencyRoutes from './routes/currency.routes.js';
 import './job/booking-cleanup.js';
 import './job/email-retry.js';
 import './job/email-sync.js';
+import './job/currency-rate.js';
 dotenv.config();
 const app = express();
 const port = process.env.PORT || 3001;
@@ -51,5 +53,9 @@ app.use('/booking', bookingRoutes);
 app.use('/site', siteRoutes);
 app.use('/admin', adminRoutes);
 app.use('/cron', cronRoutes);
+app.use('/currency', currencyRoutes);
+app.listen(port, () => {
+    console.log(`🚀 Server is running on http://localhost:${port}`);
+});
 export default app;
 //# sourceMappingURL=index.js.map

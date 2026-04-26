@@ -98,6 +98,8 @@ model events {
   title       String      @db.VarChar(255)
   description String      @db.Text
   address     String      @db.VarChar(255)
+  currency_code String
+  currency    currency_exchange @relation(fields: [currency_code], references: [currency])
   start_date  DateTime
   end_date    DateTime
   status      EventStatus
@@ -150,6 +152,8 @@ model booth_bookings {
   booth_id       Int 
   vendor_id      Int
   amount         Decimal    @db.Decimal(10, 2)
+  currency_code       String @default("USD")
+  currency    currency_exchange @relation(fields: [currency_code], references: [currency])
   payment_status PaymentStatus
   booked_at      DateTime      @default(now())
   session_id    String?       @db.VarChar(255)
@@ -209,6 +213,16 @@ model email_logs {
   attempts    Int      @default(0)
 
   @@map("email_logs")
+}
+
+model currency_exchange{
+  id Int @id @default(autoincrement())
+  currency String @unique
+  rate Decimal          @db.Decimal(10, 2)
+  is_enabled Boolean @default(true)
+  updated_at DateTime @updatedAt
+  events     events[]
+  booth_bookings booth_bookings[]
 }
 
 enum EmailLogCategory {

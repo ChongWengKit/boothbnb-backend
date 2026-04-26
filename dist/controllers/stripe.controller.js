@@ -91,6 +91,10 @@ export const handleStripeWebhook = async (req, res) => {
             if (metadata && metadata.bookingId && metadata.boothId) {
                 const bookingId = parseInt(metadata.bookingId);
                 const boothId = parseInt(metadata.boothId);
+                const booking = await eventService.getBookingById(bookingId);
+                if (booking?.payment_status === PaymentStatus.PAID) {
+                    return res.status(200).json({ received: true });
+                }
                 const sessionWithDetails = await stripe.checkout.sessions.retrieve(session.id, {
                     expand: ['payment_intent.latest_charge'],
                 });
@@ -103,6 +107,18 @@ export const handleStripeWebhook = async (req, res) => {
                     stripeChargeId: charge?.id,
                     receiptUrl: charge?.receipt_url ?? '',
                 });
+                /*
+                if (metadata.hostStripeAccount && metadata.originalBoothPrice && metadata.eventCurrency && !paymentIntent.transfer_group) {
+                    const transferAmount = Math.round(Number(metadata.originalBoothPrice));
+                    await stripe.transfers.create({
+                        amount: transferAmount,
+                        currency: metadata.eventCurrency,
+                        destination: metadata.hostStripeAccount,
+                        transfer_group: `booking_${bookingId}`,
+                    });
+
+                }
+                */
                 if (metadata.userEmail && metadata.userName && metadata.eventTitle && metadata.boothName && metadata.bookingId && metadata.userId) {
                     const userEmail = metadata.userEmail;
                     const userName = metadata.userName;
@@ -120,6 +136,10 @@ export const handleStripeWebhook = async (req, res) => {
             if (metadata && metadata.bookingId && metadata.boothId) {
                 const bookingId = parseInt(metadata.bookingId);
                 const boothId = parseInt(metadata.boothId);
+                const booking = await eventService.getBookingById(bookingId);
+                if (booking?.payment_status === PaymentStatus.FAILED) {
+                    return res.status(200).json({ received: true });
+                }
                 await eventService.confirmBoothBooking(bookingId, PaymentStatus.FAILED);
                 await eventService.confirmUpdateBoothStatus(boothId, BoothType.AVAILABLE);
             }

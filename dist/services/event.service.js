@@ -86,10 +86,11 @@ export const createEvent = async (hostId, data) => {
             address,
             longitude,
             latitude,
+            currency_code: data.currency_code,
             start_date: new Date(start_date),
             end_date: new Date(end_date),
             category: category,
-            host: { connect: { id: hostId } },
+            host_id: hostId,
             status: EventStatus.DRAFT,
             slug: "default",
             images: {
@@ -124,12 +125,13 @@ export const createEvent = async (hostId, data) => {
         }
     });
 };
-export const createBoothBooking = async (userId, boothId, boothName, eventName, amount) => {
+export const createBoothBooking = async (userId, currency_code, boothId, boothName, eventName, amount) => {
     return prisma.booth_bookings.create({
         data: {
             vendor_id: userId,
             booth_id: boothId,
             amount: amount,
+            currency_code: currency_code,
             payment_status: PaymentStatus.PENDING,
             booth_name: boothName,
             event_name: eventName
@@ -211,13 +213,18 @@ export const confirmBoothBooking = async (bookingId, status, paymentDetails) => 
     });
 };
 export const updateEvent = async (id, data) => {
-    const { title, description, address, longitude, latitude, start_date, end_date, category, images, booths } = data;
+    const { title, currency_code, description, address, longitude, latitude, start_date, end_date, category, images, booths } = data;
     const updateData = {};
     if (description !== undefined) {
         updateData.description = description;
     }
     if (address !== undefined) {
         updateData.address = address;
+    }
+    if (currency_code) {
+        updateData.currency = {
+            connect: { currency: currency_code }
+        };
     }
     if (longitude !== undefined) {
         updateData.longitude = longitude;
@@ -364,6 +371,7 @@ export const getEventBySlug = async (slug, statuses = [EventStatus.PUBLISHED]) =
             latitude: true,
             start_date: true,
             status: true,
+            currency_code: true,
             slug: true,
             end_date: true,
             description: true,
@@ -492,6 +500,21 @@ export const confirmUpdateBoothStatus = async (boothId, status) => {
             type: BoothType.RESERVED
         },
         data: { type: status },
+    });
+};
+export const getEventByBoothId = async (boothId) => {
+    return prisma.events.findFirst({
+        where: {
+            booths: {
+                some: { id: boothId }
+            }
+        },
+        include: {
+            host: true,
+            booths: {
+                where: { id: boothId }
+            }
+        }
     });
 };
 //# sourceMappingURL=event.service.js.map

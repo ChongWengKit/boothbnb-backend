@@ -83,6 +83,7 @@ export interface CreateEventRequest {
   latitude: number;
   start_date: string;
   end_date: string;
+  currency_code: string;
   category: Category;
   images: string[];
   booths: Array<{
@@ -104,6 +105,7 @@ export interface UpdateEventRequest {
   address?: string;
   longitude?: number;
   latitude?: number;
+  currency_code?: string;
   category? : Category;
   booths?: Array<{
     id: number;
@@ -165,6 +167,7 @@ export interface EventParamsResponse {
   id: number;
   title: string;
   description: string;
+  currency_code: string;
   address: string;
   longitude: number;
   latitude: number;

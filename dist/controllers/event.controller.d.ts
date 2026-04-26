@@ -15,6 +15,7 @@ export declare const closeEvent: (req: Request<{
 export declare const findEventsByHostId: (req: Request, res: Response<ApiResponse<SearchEventResponse>>) => Promise<Response<ApiResponse<SearchEventResponse>, Record<string, any>>>;
 export declare const getEventBySlug: (req: Request, res: Response<ApiResponse<EventParamsResponse>>) => Promise<Response<ApiResponse<EventParamsResponse>, Record<string, any>>>;
 export declare const getEventDetailsBySlug: (req: Request, res: Response<ApiResponse<any>>) => Promise<Response<ApiResponse<any>, Record<string, any>>>;
+export declare const getEventEditBySlug: (req: Request, res: Response<ApiResponse<any>>) => Promise<Response<ApiResponse<any>, Record<string, any>>>;
 export declare const checkoutByUpdateEventReserved: (req: Request<{
     eventId: string;
     boothId: string;

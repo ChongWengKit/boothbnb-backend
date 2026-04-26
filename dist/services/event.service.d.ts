@@ -37,8 +37,9 @@ export declare const createEvent: (hostId: number, data: CreateEventRequest) => 
     id: number;
     slug: string;
 }>;
-export declare const createBoothBooking: (userId: number, boothId: number, boothName: string, eventName: string, amount: number) => Promise<{
+export declare const createBoothBooking: (userId: number, currency_code: string, boothId: number, boothName: string, eventName: string, amount: number) => Promise<{
     id: number;
+    currency_code: string;
     amount: Prisma.Decimal;
     payment_status: import("@prisma/client").$Enums.PaymentStatus;
     booked_at: Date;
@@ -54,6 +55,7 @@ export declare const createBoothBooking: (userId: number, boothId: number, booth
 }>;
 export declare const getPendingBookingsWithSessions: () => Promise<{
     id: number;
+    currency_code: string;
     amount: Prisma.Decimal;
     payment_status: import("@prisma/client").$Enums.PaymentStatus;
     booked_at: Date;
@@ -69,6 +71,7 @@ export declare const getPendingBookingsWithSessions: () => Promise<{
 }[]>;
 export declare const updateBoothBooking: (id: number, sessionId: string) => Promise<{
     id: number;
+    currency_code: string;
     amount: Prisma.Decimal;
     payment_status: import("@prisma/client").$Enums.PaymentStatus;
     booked_at: Date;
@@ -99,6 +102,7 @@ export declare const getBookingsByUserId: (userId: number, page?: number, limit?
         };
     } & {
         id: number;
+        currency_code: string;
         amount: Prisma.Decimal;
         payment_status: import("@prisma/client").$Enums.PaymentStatus;
         booked_at: Date;
@@ -147,6 +151,7 @@ export declare const getBookingById: (id: number) => Promise<({
             latitude: number;
             longitude: number;
             slug: string;
+            currency_code: string;
             host_id: number;
         };
     } & {
@@ -169,6 +174,7 @@ export declare const getBookingById: (id: number) => Promise<({
     };
 } & {
     id: number;
+    currency_code: string;
     amount: Prisma.Decimal;
     payment_status: import("@prisma/client").$Enums.PaymentStatus;
     booked_at: Date;
@@ -189,6 +195,7 @@ export declare const confirmBoothBooking: (bookingId: number, status: PaymentSta
     receiptUrl?: string | undefined;
 }) => Promise<{
     id: number;
+    currency_code: string;
     amount: Prisma.Decimal;
     payment_status: import("@prisma/client").$Enums.PaymentStatus;
     booked_at: Date;
@@ -214,6 +221,7 @@ export declare const updateEvent: (id: number, data: UpdateEventRequest) => Prom
     latitude: number;
     longitude: number;
     slug: string;
+    currency_code: string;
     host_id: number;
 }>;
 export declare const updateEventStatus: (id: number, status: EventStatus) => Promise<{
@@ -228,6 +236,7 @@ export declare const updateEventStatus: (id: number, status: EventStatus) => Pro
     latitude: number;
     longitude: number;
     slug: string;
+    currency_code: string;
     host_id: number;
 }>;
 export declare const getEventById: (id: number) => Promise<({
@@ -259,6 +268,7 @@ export declare const getEventById: (id: number) => Promise<({
     latitude: number;
     longitude: number;
     slug: string;
+    currency_code: string;
     host_id: number;
 }) | null>;
 export declare const getEventsByHostId: (hostId: number, page?: number, limit?: number, status?: EventStatus, search?: string) => Promise<{
@@ -331,6 +341,7 @@ export declare const getEventBySlug: (slug: string, statuses?: EventStatus[]) =>
     images: {
         url: string;
     }[];
+    currency_code: string;
     host_id: number;
     host: {
         username: string;
@@ -343,5 +354,48 @@ export declare const updateBoothStatus: (boothId: number, status: BoothType) => 
     type: import("@prisma/client").$Enums.BoothType;
 }>;
 export declare const confirmUpdateBoothStatus: (boothId: number, status: BoothType) => Promise<Prisma.BatchPayload>;
+export declare const getEventByBoothId: (boothId: number) => Promise<({
+    booths: {
+        id: number;
+        name: string;
+        description: string | null;
+        event_id: number;
+        width: number;
+        type: import("@prisma/client").$Enums.BoothType;
+        y: number;
+        x: number;
+        height: number;
+        rotation: number;
+        price: Prisma.Decimal;
+    }[];
+    host: {
+        id: number;
+        email: string;
+        username: string;
+        password: string | null;
+        salt: string | null;
+        is_verified: boolean;
+        created_at: Date;
+        updated_at: Date;
+        role: import("@prisma/client").$Enums.Role;
+        stripe_account_id: string | null;
+        stripe_payout_enabled: boolean;
+        profile_photo: string | null;
+    };
+} & {
+    id: number;
+    category: import("@prisma/client").$Enums.Category;
+    title: string;
+    description: string;
+    address: string;
+    start_date: Date;
+    end_date: Date;
+    status: import("@prisma/client").$Enums.EventStatus;
+    latitude: number;
+    longitude: number;
+    slug: string;
+    currency_code: string;
+    host_id: number;
+}) | null>;
 export {};
 //# sourceMappingURL=event.service.d.ts.map
