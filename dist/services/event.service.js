@@ -67,7 +67,7 @@ export const getEventsBySearchRequest = async (request) => {
                 },
             },
             orderBy: {
-                start_date: 'asc',
+                id: 'desc',
             },
         }),
         prisma.events.count({ where })
