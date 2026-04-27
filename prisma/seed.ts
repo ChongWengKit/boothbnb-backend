@@ -11,7 +11,7 @@ async function main() {
       data: {
         currency: 'USD',
         rate: 1.0,
-        is_enabled: false,
+        is_enabled: true,
       },
     });
   }
