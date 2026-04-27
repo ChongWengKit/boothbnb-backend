@@ -219,7 +219,7 @@ model currency_exchange{
   id Int @id @default(autoincrement())
   currency String @unique
   rate Decimal          @db.Decimal(10, 2)
-  is_enabled Boolean @default(true)
+  is_enabled Boolean @default(false)
   updated_at DateTime @updatedAt
   events     events[]
   booth_bookings booth_bookings[]

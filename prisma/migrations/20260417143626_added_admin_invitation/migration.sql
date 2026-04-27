@@ -1,2 +1,0 @@
--- AlterEnum
-ALTER TYPE "EmailLogCategory" ADD VALUE 'ADMIN_INVITATION';
