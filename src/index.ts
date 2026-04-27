@@ -58,7 +58,5 @@ app.use('/site', siteRoutes)
 app.use('/admin', adminRoutes)
 app.use('/cron', cronRoutes)
 app.use('/currency', currencyRoutes)
-app.listen(port, () => {
-  console.log(`🚀 Server is running on http://localhost:${port}`);
-});
+
 export default app;
