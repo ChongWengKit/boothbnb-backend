@@ -142,7 +142,21 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
                     const bookingId = parseInt(metadata.bookingId);
                     const userId = parseInt(metadata.userId);
                     await emailService.sendBookingConfirmedMail(userEmail, userName, eventTitle, boothName, bookingId, userId);
+
+                    const eventData = await eventService.getEventByBoothId(boothId);
+                    if (eventData && eventData.host) {
+                        await emailService.sendVendorPaidMail(
+                            eventData.host.id,
+                            eventData.host.username,
+                            eventData.host.email,
+                            userName,
+                            userEmail,
+                            eventTitle,
+                            boothName
+                        );
+                    }
                 }
+                
             }
         }
         else if (event.type === 'checkout.session.expired') {

@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import * as eventService from '../services/event.service.js';
 import { PaymentStatus } from '@prisma/client';
 import { BoothType } from '../types/types.js';
+import { sendVendorPaidMail } from '../services/mail.service.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: '2026-03-25.dahlia',
@@ -29,13 +30,28 @@ export async function runBookingCleanup() {
                     const paymentIntent = session.payment_intent as Stripe.PaymentIntent;
                     const charge = paymentIntent?.latest_charge as Stripe.Charge;
 
-                    await eventService.confirmBoothBooking(booking.id, PaymentStatus.PAID, {
+                    const data = await eventService.confirmBoothBooking(booking.id, PaymentStatus.PAID, {
                         cardBrand: charge?.payment_method_details?.card?.brand ?? '',
                         cardLast4: charge?.payment_method_details?.card?.last4 ?? '',
                         stripeChargeId: charge?.id,
                         receiptUrl: charge?.receipt_url ?? '',
                     });
                     await eventService.confirmUpdateBoothStatus(booking.booth_id, BoothType.SOLD);
+
+                    const bookingData = await eventService.getBookingById(booking.id);
+                    const eventData = await eventService.getEventByBoothId(booking.booth_id);
+                    if (eventData && eventData.host && bookingData?.vendor) {
+                        await sendVendorPaidMail(
+                            eventData.host.id,
+                            eventData.host.username,
+                            eventData.host.email,
+                            bookingData.vendor.username,
+                            bookingData.vendor.email,
+                            eventData.title,
+                            booking.booth_name ?? ""
+                        );
+                    }
+                    
                     /*
                     if (hostStripeAccount && paymentIntent && !paymentIntent.transfer_group) {                   
                         

@@ -4,6 +4,7 @@ import { ResetPasswordEmail } from '../emails/reset-pass.js';
 import { BookingConfirmedEmail } from '../emails/booking-confirmed.js';
 import { HostApproved } from '../emails/host-approved.js';
 import { AdminInviteEmail } from '../emails/admin-Invite.js';
+import { VendorPaidNotificationEmail } from '../emails/vendor-paid.js';
 import pkg, { EmailLogCategory, EmailLogStatus } from '@prisma/client';
 import { prisma } from '../lib/db.js';
 import { JSX } from 'react';
@@ -93,6 +94,13 @@ export const attemptSend = async (logId: number) => {
           react: HostApproved({ username: payload.name }),
         };
         break;
+      case EmailLogCategory.VENDOR_PAID_NOTIFICATION:
+        emailOptions = {
+          to: [payload.hostEmail],
+          subject: 'Payment Received for Booth Booking',
+          react: VendorPaidNotificationEmail({ hostName: payload.hostName, vendorName: payload.vendorName, eventName: payload.eventName, boothName: payload.boothName, vendorEmail: payload.vendorEmail }),
+        };
+        break;
       default:
         return null;
     }
@@ -150,6 +158,11 @@ export const sendBookingConfirmedMail = async (email: string, name: string, even
 
 export const sendHostApproveMail = async (user_id: number, name: string, email: string) => {
   const log = await logEmail(user_id, EmailLogCategory.HOST_APPROVED, { name, email });
+  return attemptSend(log.id);
+};
+
+export const sendVendorPaidMail = async (user_id: number, hostName: string, hostEmail:string, vendorName: string, vendorEmail: string, eventName: string, boothName: string) => {
+  const log = await logEmail(user_id, EmailLogCategory.VENDOR_PAID_NOTIFICATION, { hostName, vendorName, hostEmail, vendorEmail, eventName, boothName });
   return attemptSend(log.id);
 };
 
