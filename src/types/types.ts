@@ -67,6 +67,7 @@ export interface SearchEventRequest {
   start_date?: Date | null | undefined;
   end_date?: Date | null | undefined;
   category?: string | undefined;
+  type?: string | undefined;
   ne_lat?: number | null | undefined;
   ne_lng?: number | null | undefined;
   sw_lat?: number | null | undefined;

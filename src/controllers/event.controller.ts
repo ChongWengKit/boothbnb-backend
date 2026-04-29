@@ -11,13 +11,15 @@ import { findUserById } from '../services/auth.service.js';
 import * as emailService from '../services/mail.service.js';
 import { User } from '../types/types.js'
 import { getCurrencyRate } from '../services/currency.service.js';
+import { getCurrency } from '../services/currency.service.js';
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: '2026-03-25.dahlia',
 });
 
 export const searchEvents = async (req: Request, res: Response<ApiResponse<SearchEventResponse>>) => {
     try {
-        const { title, longitude, latitude, start_date, end_date, category, page, limit, ne_lat, ne_lng, sw_lat, sw_lng } = req.query;
+        const { title, longitude, latitude, start_date, end_date, category, page, limit, ne_lat, ne_lng, sw_lat, sw_lng, extent, type } = req.query;
 
         const searchRequest: SearchEventRequest = {
             title: typeof title === 'string' ? title : undefined,
@@ -30,9 +32,11 @@ export const searchEvents = async (req: Request, res: Response<ApiResponse<Searc
             ne_lng: typeof ne_lng === 'string' ? parseFloat(ne_lng) : undefined,
             sw_lat: typeof sw_lat === 'string' ? parseFloat(sw_lat) : undefined,
             sw_lng: typeof sw_lng === 'string' ? parseFloat(sw_lng) : undefined,
+            type: typeof type === 'string' ? type : undefined,
             page: typeof page === 'string' ? parseInt(page) : 1,
-            limit: typeof limit === 'string' ? parseInt(limit) : 10,
+            limit: typeof limit === 'string' ? parseInt(limit) : 12,
         };
+        console.log(searchRequest)
         const { events, total } = await eventService.getEventsBySearchRequest(searchRequest);
         const totalPages = Math.ceil(total / searchRequest.limit!);
 
@@ -378,7 +382,7 @@ export const getEventBySlug = async (
             }
             targetRate = Number(targetCurrency.rate);
 
-            const eventCurrency = await getCurrencyRate(event.currency_code.toUpperCase());
+            const eventCurrency = await getCurrency(event.currency_code.toUpperCase());
             if (eventCurrency) {
                 baseRate = Number(eventCurrency.rate);
             }
@@ -452,7 +456,7 @@ export const getEventDetailsBySlug = async (
             }
             targetRate = Number(targetCurrency.rate);
 
-            const eventCurrency = await getCurrencyRate(event.currency_code.toUpperCase());
+            const eventCurrency = await getCurrency(event.currency_code.toUpperCase());
             if (eventCurrency) {
                 baseRate = Number(eventCurrency.rate);
             }
@@ -526,7 +530,7 @@ export const getEventEditBySlug = async (
             }
             targetRate = Number(targetCurrency.rate);
 
-            const eventCurrency = await getCurrencyRate(event.currency_code.toUpperCase());
+            const eventCurrency = await getCurrency(event.currency_code.toUpperCase());
             if (eventCurrency) {
                 baseRate = Number(eventCurrency.rate);
             }
@@ -568,6 +572,7 @@ export const checkoutByUpdateEventReserved = async (
     res: Response<ApiResponse<any>>
 ) => {
     try {
+
         const { eventId, boothId } = req.body;
         if (!req.user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
@@ -589,7 +594,7 @@ export const checkoutByUpdateEventReserved = async (
         }
         targetRate = Number(targetCurrency.rate);
 
-        const eventCurrency = await getCurrencyRate(event.currency_code.toUpperCase());
+        const eventCurrency = await getCurrency(event.currency_code.toUpperCase());
         if (eventCurrency) {
             baseRate = Number(eventCurrency.rate);
         }
@@ -609,9 +614,11 @@ export const checkoutByUpdateEventReserved = async (
         const currentDate = new Date();
         const eventStartDate = new Date(event.start_date);
         if (currentDate > eventStartDate) {
+
             return res.status(400).json({ success: false, message: 'Event has already started' });
         }
         if (booth.type !== BoothType.AVAILABLE) {
+
             return res.status(400).json({ success: false, message: 'Booth is not available' });
         }
 

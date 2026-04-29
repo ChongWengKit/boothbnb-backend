@@ -74,7 +74,7 @@ export const getAccount = async (req: Request, res: Response<ApiResponse<any>>) 
 export const getPublicAccount = async (req: Request, res: Response<ApiResponse<any>>) => {
     try {
         const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 10;
+        const limit = parseInt(req.query.limit as string) || 12;
         const username = req.params.username as string;
         if (!username) {
             return res.status(404).json({ success: false, message: 'User not found.' });

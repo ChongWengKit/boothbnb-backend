@@ -46,6 +46,7 @@ export const getEventsBySearchRequest = async (request: SearchEventRequest) => {
     ne_lng,
     sw_lat,
     sw_lng,
+    type,
     page = 1,
     limit = 10
   } = request;
@@ -54,7 +55,15 @@ export const getEventsBySearchRequest = async (request: SearchEventRequest) => {
     status: EventStatus.PUBLISHED as any,
   };
 
-  const range = 0.5;
+  let range = 0.05;
+
+  if (type === 'house' || type === 'street') {
+    range = 0.02;
+  } else if (type === 'city' || type === 'town') {
+    range = 0.15;
+  } else if (type === 'country') {
+    range = 5.0;
+  }
 
   if (title) {
     where.OR = [
@@ -184,7 +193,7 @@ export const createEvent = async (hostId: number, data: CreateEventRequest) => {
   });
 };
 
-export const createBoothBooking = async (userId: number,currency_code:string, boothId: number, boothName: string, eventName: string, amount: number) => {
+export const createBoothBooking = async (userId: number, currency_code: string, boothId: number, boothName: string, eventName: string, amount: number) => {
   return prisma.booth_bookings.create({
     data: {
       vendor_id: userId,
@@ -286,7 +295,7 @@ export const confirmBoothBooking = async (
   });
 };
 export const updateEvent = async (id: number, data: UpdateEventRequest) => {
-  const { title, currency_code,description, address, longitude, latitude, start_date, end_date, category, images, booths } = data;
+  const { title, currency_code, description, address, longitude, latitude, start_date, end_date, category, images, booths } = data;
 
   const updateData: Prisma.eventsUpdateInput = {};
 
@@ -296,7 +305,7 @@ export const updateEvent = async (id: number, data: UpdateEventRequest) => {
   if (address !== undefined) {
     updateData.address = address;
   }
-if (currency_code) {
+  if (currency_code) {
     updateData.currency = {
       connect: { currency: currency_code }
     };
@@ -599,7 +608,7 @@ export const getEventByBoothId = async (boothId: number) => {
         some: { id: boothId }
       }
     },
-    include: { 
+    include: {
       host: true,
       booths: {
         where: { id: boothId }
