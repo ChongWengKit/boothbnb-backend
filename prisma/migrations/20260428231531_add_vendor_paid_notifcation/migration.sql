@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "EmailLogCategory" ADD VALUE 'VENDOR_PAID_NOTIFICATION';
