@@ -20,7 +20,7 @@ export const attemptSend = async (logId: number) => {
 
   const status = log.status;
 
-  if (status === "PENDING" || status === "BOUNCED" || status === "COMPLAINED") {
+  if (status === "BOUNCED" || status === "COMPLAINED") {
     return null;
   }
 
