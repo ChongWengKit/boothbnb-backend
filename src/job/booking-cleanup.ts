@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import * as eventService from '../services/event.service.js';
 import { PaymentStatus } from '@prisma/client';
 import { BoothType } from '../types/types.js';
-import { sendVendorPaidMail } from '../services/mail.service.js';
+import { sendVendorPaidMail, sendBookingConfirmedMail } from '../services/mail.service.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: '2026-03-25.dahlia',
@@ -40,7 +40,17 @@ export async function runBookingCleanup() {
 
                     const bookingData = await eventService.getBookingById(booking.id);
                     const eventData = await eventService.getEventByBoothId(booking.booth_id);
+                    
                     if (eventData && eventData.host && bookingData?.vendor) {
+                        await sendBookingConfirmedMail(
+                            bookingData.vendor.email,
+                            bookingData.vendor.username,
+                            eventData.title,
+                            booking.booth_name ?? "",
+                            booking.id,
+                            bookingData.vendor_id
+                        );
+
                         await sendVendorPaidMail(
                             eventData.host.id,
                             eventData.host.username,
