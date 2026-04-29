@@ -64,11 +64,22 @@ export const checkStripeStatus = async (req: Request, res: Response) => {
         if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
         let payoutsEnabled = user.stripe_payout_enabled;
-        const hasAccountId = !!user.stripe_account_id;
+        let hasAccountId = !!user.stripe_account_id;
 
         if (hasAccountId && !payoutsEnabled) {
             const account = await stripe.accounts.retrieve(user.stripe_account_id!);
-            if (account.payouts_enabled) {
+            if (!account.details_submitted) {
+                await prisma.users.update({
+                    where: { id: userId },
+                    data: {
+                        stripe_account_id: null,
+                        stripe_payout_enabled: false
+                    }
+                });
+                hasAccountId = false;
+                payoutsEnabled = false;
+                user.stripe_account_id = null;
+            } else if (account.payouts_enabled && !payoutsEnabled) {
                 await updateUserStripeStatus(userId, true);
                 payoutsEnabled = true;
             }
