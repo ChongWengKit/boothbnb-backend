@@ -178,6 +178,7 @@ export interface EventParamsResponse {
   end_date: Date;
   host_id: number;
   username: string;
+  profile_photo: string | null;
   booths: Array<{
     id: number;
     name: string;

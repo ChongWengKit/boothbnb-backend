@@ -36,7 +36,6 @@ export const searchEvents = async (req: Request, res: Response<ApiResponse<Searc
             page: typeof page === 'string' ? parseInt(page) : 1,
             limit: typeof limit === 'string' ? parseInt(limit) : 12,
         };
-        console.log(searchRequest)
         const { events, total } = await eventService.getEventsBySearchRequest(searchRequest);
         const totalPages = Math.ceil(total / searchRequest.limit!);
 
@@ -388,6 +387,7 @@ export const getEventBySlug = async (
             }
         }
         else {
+
             return res.status(400).json({ success: false, message: `Currency not supported.` });
         }
         const responseData: EventParamsResponse = {
@@ -399,6 +399,7 @@ export const getEventBySlug = async (
             })),
             host_id: event.host_id,
             username: event.host?.username || '',
+            profile_photo: event.host?.profile_photo || null,
             status: event.status as EventStatus,
             latitude: event.latitude,
             longitude: event.longitude,
@@ -414,6 +415,7 @@ export const getEventBySlug = async (
             data: responseData
         });
     } catch (error) {
+
         return res.status(500).json({ success: false, message: 'Internal server error' });
 
     }
