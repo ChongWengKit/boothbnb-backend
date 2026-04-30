@@ -57,10 +57,22 @@ export const checkStripeStatus = async (req, res) => {
         if (!user)
             return res.status(404).json({ success: false, message: "User not found" });
         let payoutsEnabled = user.stripe_payout_enabled;
-        const hasAccountId = !!user.stripe_account_id;
+        let hasAccountId = !!user.stripe_account_id;
         if (hasAccountId && !payoutsEnabled) {
             const account = await stripe.accounts.retrieve(user.stripe_account_id);
-            if (account.payouts_enabled) {
+            if (!account.details_submitted) {
+                await prisma.users.update({
+                    where: { id: userId },
+                    data: {
+                        stripe_account_id: null,
+                        stripe_payout_enabled: false
+                    }
+                });
+                hasAccountId = false;
+                payoutsEnabled = false;
+                user.stripe_account_id = null;
+            }
+            else if (account.payouts_enabled && !payoutsEnabled) {
                 await updateUserStripeStatus(userId, true);
                 payoutsEnabled = true;
             }
@@ -127,6 +139,10 @@ export const handleStripeWebhook = async (req, res) => {
                     const bookingId = parseInt(metadata.bookingId);
                     const userId = parseInt(metadata.userId);
                     await emailService.sendBookingConfirmedMail(userEmail, userName, eventTitle, boothName, bookingId, userId);
+                    const eventData = await eventService.getEventByBoothId(boothId);
+                    if (eventData && eventData.host) {
+                        await emailService.sendVendorPaidMail(eventData.host.id, eventData.host.username, eventData.host.email, userName, userEmail, eventTitle, boothName);
+                    }
                 }
             }
         }

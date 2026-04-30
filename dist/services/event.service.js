@@ -3,11 +3,20 @@ import { EventStatus, BoothType } from '../types/types.js';
 import { prisma } from '../lib/db.js';
 import * as slugify from 'slugify';
 export const getEventsBySearchRequest = async (request) => {
-    const { title, longitude, latitude, start_date, end_date, category, ne_lat, ne_lng, sw_lat, sw_lng, page = 1, limit = 10 } = request;
+    const { title, longitude, latitude, start_date, end_date, category, ne_lat, ne_lng, sw_lat, sw_lng, type, page = 1, limit = 10 } = request;
     const where = {
         status: EventStatus.PUBLISHED,
     };
-    const range = 0.5;
+    let range = 0.05;
+    if (type === 'house' || type === 'street') {
+        range = 0.02;
+    }
+    else if (type === 'city' || type === 'town') {
+        range = 0.15;
+    }
+    else if (type === 'country') {
+        range = 5.0;
+    }
     if (title) {
         where.OR = [
             { title: { contains: title, mode: 'insensitive' } },

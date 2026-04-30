@@ -6,12 +6,13 @@ import jwt from 'jsonwebtoken';
 import * as bookmarkService from '../services/bookmark.service.js';
 import { findUserById } from '../services/auth.service.js';
 import { getCurrencyRate } from '../services/currency.service.js';
+import { getCurrency } from '../services/currency.service.js';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
     apiVersion: '2026-03-25.dahlia',
 });
 export const searchEvents = async (req, res) => {
     try {
-        const { title, longitude, latitude, start_date, end_date, category, page, limit, ne_lat, ne_lng, sw_lat, sw_lng } = req.query;
+        const { title, longitude, latitude, start_date, end_date, category, page, limit, ne_lat, ne_lng, sw_lat, sw_lng, extent, type } = req.query;
         const searchRequest = {
             title: typeof title === 'string' ? title : undefined,
             longitude: typeof longitude === 'string' ? parseFloat(longitude) : undefined,
@@ -23,8 +24,9 @@ export const searchEvents = async (req, res) => {
             ne_lng: typeof ne_lng === 'string' ? parseFloat(ne_lng) : undefined,
             sw_lat: typeof sw_lat === 'string' ? parseFloat(sw_lat) : undefined,
             sw_lng: typeof sw_lng === 'string' ? parseFloat(sw_lng) : undefined,
+            type: typeof type === 'string' ? type : undefined,
             page: typeof page === 'string' ? parseInt(page) : 1,
-            limit: typeof limit === 'string' ? parseInt(limit) : 10,
+            limit: typeof limit === 'string' ? parseInt(limit) : 12,
         };
         const { events, total } = await eventService.getEventsBySearchRequest(searchRequest);
         const totalPages = Math.ceil(total / searchRequest.limit);
@@ -334,7 +336,7 @@ export const getEventBySlug = async (req, res) => {
                 return res.status(400).json({ success: false, message: `Currency ${currencyCode} not supported.` });
             }
             targetRate = Number(targetCurrency.rate);
-            const eventCurrency = await getCurrencyRate(event.currency_code.toUpperCase());
+            const eventCurrency = await getCurrency(event.currency_code.toUpperCase());
             if (eventCurrency) {
                 baseRate = Number(eventCurrency.rate);
             }
@@ -351,6 +353,7 @@ export const getEventBySlug = async (req, res) => {
             })),
             host_id: event.host_id,
             username: event.host?.username || '',
+            profile_photo: event.host?.profile_photo || null,
             status: event.status,
             latitude: event.latitude,
             longitude: event.longitude,
@@ -399,7 +402,7 @@ export const getEventDetailsBySlug = async (req, res) => {
                 return res.status(400).json({ success: false, message: `Currency ${currencyCode} not supported.` });
             }
             targetRate = Number(targetCurrency.rate);
-            const eventCurrency = await getCurrencyRate(event.currency_code.toUpperCase());
+            const eventCurrency = await getCurrency(event.currency_code.toUpperCase());
             if (eventCurrency) {
                 baseRate = Number(eventCurrency.rate);
             }
@@ -424,6 +427,7 @@ export const getEventDetailsBySlug = async (req, res) => {
                 total_bookings,
                 available_booths,
                 username: eventData.host?.username || '',
+                profile_photo: eventData.host?.profile_photo || null,
                 total_money_made: Number(((Number(eventData.total_money_made) / baseRate) * targetRate).toFixed(2)),
                 bookmarks_count: eventData.bookmarks_count,
                 booking_summaries: eventData.booking_summaries
@@ -463,7 +467,7 @@ export const getEventEditBySlug = async (req, res) => {
                 return res.status(400).json({ success: false, message: `Currency ${currencyCode} not supported.` });
             }
             targetRate = Number(targetCurrency.rate);
-            const eventCurrency = await getCurrencyRate(event.currency_code.toUpperCase());
+            const eventCurrency = await getCurrency(event.currency_code.toUpperCase());
             if (eventCurrency) {
                 baseRate = Number(eventCurrency.rate);
             }
@@ -517,7 +521,7 @@ export const checkoutByUpdateEventReserved = async (req, res) => {
             return res.status(400).json({ success: false, message: `Currency ${currencyCode} not supported.` });
         }
         targetRate = Number(targetCurrency.rate);
-        const eventCurrency = await getCurrencyRate(event.currency_code.toUpperCase());
+        const eventCurrency = await getCurrency(event.currency_code.toUpperCase());
         if (eventCurrency) {
             baseRate = Number(eventCurrency.rate);
         }

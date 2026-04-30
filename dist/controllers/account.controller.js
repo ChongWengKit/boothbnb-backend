@@ -65,7 +65,7 @@ export const getAccount = async (req, res) => {
 export const getPublicAccount = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
+        const limit = parseInt(req.query.limit) || 12;
         const username = req.params.username;
         if (!username) {
             return res.status(404).json({ success: false, message: 'User not found.' });

@@ -4,6 +4,7 @@ import { ResetPasswordEmail } from '../emails/reset-pass.js';
 import { BookingConfirmedEmail } from '../emails/booking-confirmed.js';
 import { HostApproved } from '../emails/host-approved.js';
 import { AdminInviteEmail } from '../emails/admin-Invite.js';
+import { VendorPaidNotificationEmail } from '../emails/vendor-paid.js';
 import { EmailLogCategory, EmailLogStatus } from '@prisma/client';
 import { prisma } from '../lib/db.js';
 import crypto from 'crypto';
@@ -14,7 +15,7 @@ export const attemptSend = async (logId) => {
     if (!log)
         return null;
     const status = log.status;
-    if (status === "PENDING" || status === "BOUNCED" || status === "COMPLAINED") {
+    if (status === "BOUNCED" || status === "COMPLAINED") {
         return null;
     }
     const payload = log.payload;
@@ -84,6 +85,13 @@ export const attemptSend = async (logId) => {
                     react: HostApproved({ username: payload.name }),
                 };
                 break;
+            case EmailLogCategory.VENDOR_PAID_NOTIFICATION:
+                emailOptions = {
+                    to: [payload.hostEmail],
+                    subject: 'Payment Received for Booth Booking',
+                    react: VendorPaidNotificationEmail({ hostName: payload.hostName, vendorName: payload.vendorName, eventName: payload.eventName, boothName: payload.boothName, vendorEmail: payload.vendorEmail }),
+                };
+                break;
             default:
                 return null;
         }
@@ -135,6 +143,10 @@ export const sendBookingConfirmedMail = async (email, name, event, booth, bookin
 };
 export const sendHostApproveMail = async (user_id, name, email) => {
     const log = await logEmail(user_id, EmailLogCategory.HOST_APPROVED, { name, email });
+    return attemptSend(log.id);
+};
+export const sendVendorPaidMail = async (user_id, hostName, hostEmail, vendorName, vendorEmail, eventName, boothName) => {
+    const log = await logEmail(user_id, EmailLogCategory.VENDOR_PAID_NOTIFICATION, { hostName, vendorName, hostEmail, vendorEmail, eventName, boothName });
     return attemptSend(log.id);
 };
 export const logEmail = async (user_id, category, payload, status = EmailLogStatus.PENDING, email_id) => {

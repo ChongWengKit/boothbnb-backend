@@ -58,5 +58,4 @@ app.use('/site', siteRoutes)
 app.use('/admin', adminRoutes)
 app.use('/cron', cronRoutes)
 app.use('/currency', currencyRoutes)
-
 export default app;

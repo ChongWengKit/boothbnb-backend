@@ -58,6 +58,7 @@ export interface SearchEventRequest {
     start_date?: Date | null | undefined;
     end_date?: Date | null | undefined;
     category?: string | undefined;
+    type?: string | undefined;
     ne_lat?: number | null | undefined;
     ne_lng?: number | null | undefined;
     sw_lat?: number | null | undefined;
@@ -158,6 +159,7 @@ export interface EventParamsResponse {
     end_date: Date;
     host_id: number;
     username: string;
+    profile_photo: string | null;
     booths: Array<{
         id: number;
         name: string;

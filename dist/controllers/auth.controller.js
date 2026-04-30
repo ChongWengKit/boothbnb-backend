@@ -99,7 +99,11 @@ export const googleSignUp = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid role.' });
         }
         if (!user) {
-            let profile_photo = photo;
+            let is_verfied = true;
+            if (role === Role.HOST) {
+                is_verfied = false;
+            }
+            let profile_photo = null;
             if (photo) {
                 try {
                     cloudinary.config({
@@ -119,7 +123,7 @@ export const googleSignUp = async (req, res) => {
                 email,
                 username: name,
                 role: role,
-                is_verified: true,
+                is_verified: is_verfied,
                 profile_photo: profile_photo,
             });
         }
