@@ -568,7 +568,7 @@ export const checkoutByUpdateEventReserved = async (req, res) => {
             line_items: lineItems,
             mode: 'payment',
             success_url: `${process.env.FRONTEND_DOMAIN}/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.FRONTEND_DOMAIN}/dashboard/${event.slug}`,
+            cancel_url: `${process.env.FRONTEND_DOMAIN}/dashboard/$${encodeURIComponent(event.slug)}`,
             payment_intent_data: {
                 application_fee_amount: isZeroDecimal
                     ? Math.round(calculatedPrice * 0.02)
@@ -598,7 +598,6 @@ export const checkoutByUpdateEventReserved = async (req, res) => {
         return res.status(200).json({ success: true, message: 'Booth reserved successfully', data: session.url });
     }
     catch (error) {
-        console.error(error);
         return res.status(500).json({ success: false, message: 'Internal server error', });
     }
 };
