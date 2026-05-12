@@ -575,7 +575,6 @@ export const checkoutByUpdateEventReserved = async (
     res: Response<ApiResponse<any>>
 ) => {
     try {
-
         const { eventId, boothId } = req.body;
         if (!req.user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
@@ -601,7 +600,6 @@ export const checkoutByUpdateEventReserved = async (
         if (eventCurrency) {
             baseRate = Number(eventCurrency.rate);
         }
-
         const host = await findUserById(event.host_id);
         if (!host || !host.stripe_account_id) {
             return res.status(400).json({
@@ -609,7 +607,6 @@ export const checkoutByUpdateEventReserved = async (
                 message: 'This event host has not connected their Stripe account yet.'
             });
         }
-
         const booth = event.booths.find(b => b.id === parseInt(boothId));
         if (!booth) {
             return res.status(404).json({ success: false, message: 'Booth not found' });
@@ -617,14 +614,11 @@ export const checkoutByUpdateEventReserved = async (
         const currentDate = new Date();
         const eventStartDate = new Date(event.start_date);
         if (currentDate > eventStartDate) {
-
             return res.status(400).json({ success: false, message: 'Event has already started' });
         }
         if (booth.type !== BoothType.AVAILABLE) {
-
             return res.status(400).json({ success: false, message: 'Booth is not available' });
         }
-
         await eventService.updateBoothStatus(boothId, BoothType.RESERVED);
 
         const zeroDecimalCurrencies = ['JPY', 'KRW', 'VND', 'CLP', 'LAK'];
@@ -685,6 +679,7 @@ export const checkoutByUpdateEventReserved = async (
 
         return res.status(200).json({ success: true, message: 'Booth reserved successfully', data: session.url });
     } catch (error) {
-        return res.status(500).json({ success: false, message: 'Internal server error' });
+        console.error(error);
+        return res.status(500).json({ success: false, message: 'Internal server error', });
     }
 }

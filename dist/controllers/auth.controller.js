@@ -91,7 +91,7 @@ export const googleSignUp = async (req, res) => {
             return res.status(401).json({ success: false, message: 'Unauthorized.' });
         }
         const email = data.email;
-        const name = data.name;
+        const name = data.name + Math.floor(Math.random() * 10000);
         const photo = data.picture;
         let user = await findUserByEmail(email);
         const allowedRoles = [Role.HOST, Role.VENDOR];
