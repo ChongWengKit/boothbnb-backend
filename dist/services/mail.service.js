@@ -116,6 +116,7 @@ export const attemptSend = async (logId) => {
         });
     }
     catch (e) {
+        console.error(e);
         return await prisma.email_logs.update({
             where: { id: log.id },
             data: {
