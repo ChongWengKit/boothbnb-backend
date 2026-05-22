@@ -471,6 +471,7 @@ export const getEventDetailsBySlug = async (
         const total_capacity = active_booths.length;
         const available_booths = active_booths.filter((b: any) => b.type === BoothType.AVAILABLE).length;
         const total_bookings = total_capacity - available_booths;
+        console.log(eventData.booking_summaries)
         return res.status(200).json({
             success: true,
             message: 'Event details retrieved successfully',
