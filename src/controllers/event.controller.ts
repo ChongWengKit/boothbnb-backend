@@ -485,7 +485,6 @@ export const getEventDetailsBySlug = async (
                 available_booths,
                 username: eventData.host?.username || '',
                 profile_photo: eventData.host?.profile_photo || null,
-                total_money_made: Number(((Number(eventData.total_money_made) / baseRate) * targetRate).toFixed(2)),
                 bookmarks_count: eventData.bookmarks_count,
                 booking_summaries: eventData.booking_summaries
             }
@@ -559,7 +558,6 @@ export const getEventEditBySlug = async (
                 total_bookings,
                 available_booths,
                 username: eventData.host?.username || '',
-                total_money_made: Number(((Number(eventData.total_money_made) / baseRate) * targetRate).toFixed(2)),
                 bookmarks_count: eventData.bookmarks_count,
                 booking_summaries: eventData.booking_summaries
             }

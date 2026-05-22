@@ -542,7 +542,6 @@ export const getEventDetailsBySlug = async (slug: string) => {
   if (!event) return null;
 
   const eventData = event as any;
-  let totalMoneyMade = 0;
 
   const paidVendors = new Set();
   const reservingVendors = new Set();
@@ -565,7 +564,6 @@ export const getEventDetailsBySlug = async (slug: string) => {
 
       if (isPaid) {
         paidVendors.add(booking.vendor);
-        totalMoneyMade += Number(booking.amount * 0.98);
       } else if (booking.payment_status === PaymentStatus.PENDING) {
         reservingVendors.add(booking.vendor);
       }
@@ -574,7 +572,6 @@ export const getEventDetailsBySlug = async (slug: string) => {
 
   return {
     ...eventData,
-    total_money_made: totalMoneyMade,
     bookmarks_count: eventData._count?.bookmarks || 0,
     paid_vendors: Array.from(paidVendors),
     reserving_vendors: Array.from(reservingVendors),
