@@ -395,7 +395,7 @@ export const getEventBySlug = async (
             booths: event.booths.map(b => ({
                 ...b,
                 type: b.type as BoothType,
-                price: Number((currencyCode ? (Number(b.price) * 1.02 / baseRate) * targetRate : Number(b.price) * 1.02).toFixed(2))
+                price: Number((currencyCode ? (Number(b.price) / baseRate) * targetRate : Number(b.price)).toFixed(2))
             })),
             host_id: event.host_id,
             username: event.host?.username || '',
@@ -479,7 +479,8 @@ export const getEventDetailsBySlug = async (
                 ...eventData,
                 booths: eventData.booths.map((b: any) => ({
                     ...b,
-                    price: Number(((Number(b.price) * 1.02 / baseRate) * targetRate).toFixed(2))
+                    base_price: Number((Number(b.price)).toFixed(2)),
+                    price: Number(((Number(b.price) / baseRate) * targetRate).toFixed(2))
                 })),
                 total_capacity,
                 total_bookings,
@@ -624,7 +625,7 @@ export const checkoutByUpdateEventReserved = async (
 
         const isZeroDecimal = zeroDecimalCurrencies.includes(currencyCode.toUpperCase());
 
-        const calculatedPrice = (Number(booth.price) * 1.02 / baseRate) * targetRate;
+        const calculatedPrice = (Number(booth.price) / baseRate) * targetRate;
 
         const unitAmount = isZeroDecimal
             ? Math.round(calculatedPrice)
