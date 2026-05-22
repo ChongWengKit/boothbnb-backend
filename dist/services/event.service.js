@@ -443,7 +443,7 @@ export const getEventDetailsBySlug = async (slug) => {
                                     profile_photo: true,
                                     email: true
                                 }
-                            }
+                            },
                         }
                     }
                 }
@@ -469,7 +469,7 @@ export const getEventDetailsBySlug = async (slug) => {
             bookingSummaries.push({
                 vendor: booking.vendor,
                 booth_name: booth.name,
-                amount: Number(booking.amount),
+                price: Number(booking.amount),
                 currency_code: booking.currency_code,
                 status: isPaid ? 'PAID' : 'RESERVED',
                 booked_at: booking.booked_at
