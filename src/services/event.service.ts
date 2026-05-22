@@ -556,7 +556,7 @@ export const getEventDetailsBySlug = async (slug: string) => {
       bookingSummaries.push({
         vendor: booking.vendor,
         booth_name: booth.name,
-        amount: booking.amount,
+        amount: Number(booking.amount),
         currency_code: booking.currency_code,
         status: isPaid ? 'PAID' : 'RESERVED',
         booked_at: booking.booked_at
