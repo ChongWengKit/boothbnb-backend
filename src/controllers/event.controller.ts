@@ -395,7 +395,7 @@ export const getEventBySlug = async (
             booths: event.booths.map(b => ({
                 ...b,
                 type: b.type as BoothType,
-                price: Number((currencyCode ? (Number(b.price) / baseRate) * targetRate : Number(b.price)).toFixed(2))
+                price: Number(((currencyCode ? (Number(b.price) / baseRate) * targetRate : Number(b.price)) * 1.05).toFixed(2))
             })),
             host_id: event.host_id,
             username: event.host?.username || '',
@@ -480,7 +480,7 @@ export const getEventDetailsBySlug = async (
                 booths: eventData.booths.map((b: any) => ({
                     ...b,
                     base_price: Number((Number(b.price)).toFixed(2)),
-                    price: Number(((Number(b.price) / baseRate) * targetRate).toFixed(2))
+                    price: Number(((Number(b.price) / baseRate) * targetRate * 1.05).toFixed(2))
                 })),
                 total_capacity,
                 total_bookings,
@@ -554,7 +554,7 @@ export const getEventEditBySlug = async (
                 ...eventData,
                 booths: eventData.booths.map((b: any) => ({
                     ...b,
-                    price: Number(((Number(b.price) / baseRate) * targetRate).toFixed(2))
+                    price: Number(((Number(b.price) / baseRate) * targetRate * 1.05).toFixed(2))
                 })),
                 total_capacity,
                 total_bookings,
@@ -625,7 +625,7 @@ export const checkoutByUpdateEventReserved = async (
 
         const isZeroDecimal = zeroDecimalCurrencies.includes(currencyCode.toUpperCase());
 
-        const calculatedPrice = (Number(booth.price) / baseRate) * targetRate;
+        const calculatedPrice = (Number(booth.price) / baseRate) * targetRate * 1.05;
 
         const unitAmount = isZeroDecimal
             ? Math.round(calculatedPrice)
@@ -651,8 +651,8 @@ export const checkoutByUpdateEventReserved = async (
             cancel_url: `${process.env.FRONTEND_DOMAIN}/dashboard/${encodeURIComponent(event.slug)}`,
             payment_intent_data: {
                 application_fee_amount: isZeroDecimal 
-                    ? Math.round(calculatedPrice * 0.02) 
-                    : Math.round(calculatedPrice * 100 * 0.02),
+                    ? Math.round(calculatedPrice * 0.05) 
+                    : Math.round(calculatedPrice * 100 * 0.05),
                 transfer_data: {
                     destination: host.stripe_account_id,
                 },
