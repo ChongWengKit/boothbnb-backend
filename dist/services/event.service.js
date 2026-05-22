@@ -470,13 +470,14 @@ export const getEventDetailsBySlug = async (slug) => {
             bookingSummaries.push({
                 vendor: booking.vendor,
                 booth_name: booth.name,
-                price: booth.price,
+                price: booking.amount,
+                currency: booking.currency_code,
                 status: isPaid ? 'PAID' : 'RESERVED',
                 booked_at: booking.booked_at
             });
             if (isPaid) {
                 paidVendors.add(booking.vendor);
-                totalMoneyMade += Number(booth.price);
+                totalMoneyMade += Number(booking.amount * 0.98);
             }
             else if (booking.payment_status === PaymentStatus.PENDING) {
                 reservingVendors.add(booking.vendor);
