@@ -560,8 +560,8 @@ export const getEventDetailsBySlug = async (slug: string) => {
       bookingSummaries.push({
         vendor: booking.vendor,
         booth_name: booth.name,
-        price: booking.amount,
-        currency: booking.currency_code,
+        price: booth.amount,
+        currency: eventData.currency_code,
         status: isPaid ? 'PAID' : 'RESERVED',
         booked_at: booking.booked_at
       });
