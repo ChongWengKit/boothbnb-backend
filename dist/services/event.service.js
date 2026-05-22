@@ -443,11 +443,7 @@ export const getEventDetailsBySlug = async (slug) => {
                                     profile_photo: true,
                                     email: true
                                 }
-                            },
-                            amount: true,
-                            currency_code: true,
-                            payment_status: true,
-                            booked_at: true
+                            }
                         }
                     }
                 }
@@ -462,6 +458,7 @@ export const getEventDetailsBySlug = async (slug) => {
     if (!event)
         return null;
     const eventData = event;
+    let totalMoneyMade = 0;
     const paidVendors = new Set();
     const reservingVendors = new Set();
     const bookingSummaries = [];
@@ -473,13 +470,13 @@ export const getEventDetailsBySlug = async (slug) => {
             bookingSummaries.push({
                 vendor: booking.vendor,
                 booth_name: booth.name,
-                price: booth.amount,
-                currency: eventData.currency_code,
+                price: booth.price,
                 status: isPaid ? 'PAID' : 'RESERVED',
                 booked_at: booking.booked_at
             });
             if (isPaid) {
                 paidVendors.add(booking.vendor);
+                totalMoneyMade += Number(booth.price);
             }
             else if (booking.payment_status === PaymentStatus.PENDING) {
                 reservingVendors.add(booking.vendor);
@@ -488,6 +485,7 @@ export const getEventDetailsBySlug = async (slug) => {
     });
     return {
         ...eventData,
+        total_money_made: totalMoneyMade,
         bookmarks_count: eventData._count?.bookmarks || 0,
         paid_vendors: Array.from(paidVendors),
         reserving_vendors: Array.from(reservingVendors),
