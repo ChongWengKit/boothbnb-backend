@@ -526,7 +526,11 @@ export const getEventDetailsBySlug = async (slug: string) => {
                   profile_photo: true,
                   email: true
                 }
-              }
+              },
+              amount: true,
+              currency_code: true,
+              payment_status: true,
+              booked_at: true
             }
           }
         }
