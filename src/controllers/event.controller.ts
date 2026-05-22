@@ -595,7 +595,7 @@ export const checkoutByUpdateEventReserved = async (
             return res.status(400).json({ success: false, message: `Currency ${currencyCode} not supported.` });
         }
         targetRate = Number(targetCurrency.rate);
-
+        
         const eventCurrency = await getCurrency(event.currency_code.toUpperCase());
         if (eventCurrency) {
             baseRate = Number(eventCurrency.rate);
@@ -625,7 +625,7 @@ export const checkoutByUpdateEventReserved = async (
 
         const isZeroDecimal = zeroDecimalCurrencies.includes(currencyCode.toUpperCase());
 
-        const calculatedPrice = (Number(booth.price) / baseRate) * targetRate;
+        const calculatedPrice = (Number(booth.price) * 1.02 / baseRate) * targetRate;
 
         const unitAmount = isZeroDecimal
             ? Math.round(calculatedPrice)

@@ -547,7 +547,7 @@ export const checkoutByUpdateEventReserved = async (req, res) => {
         await eventService.updateBoothStatus(boothId, BoothType.RESERVED);
         const zeroDecimalCurrencies = ['JPY', 'KRW', 'VND', 'CLP', 'LAK'];
         const isZeroDecimal = zeroDecimalCurrencies.includes(currencyCode.toUpperCase());
-        const calculatedPrice = (Number(booth.price) / baseRate) * targetRate;
+        const calculatedPrice = (Number(booth.price) * 1.02 / baseRate) * targetRate;
         const unitAmount = isZeroDecimal
             ? Math.round(calculatedPrice)
             : Math.round(calculatedPrice * 100);
