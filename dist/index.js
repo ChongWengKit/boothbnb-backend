@@ -15,6 +15,7 @@ import siteRoutes from './routes/site.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import cronRoutes from './routes/cron.routes.js';
 import currencyRoutes from './routes/currency.routes.js';
+import rateLimit from 'express-rate-limit';
 import './job/booking-cleanup.js';
 import './job/email-retry.js';
 import './job/email-sync.js';
@@ -39,6 +40,14 @@ app.use(cors({
     credentials: true
 }));
 app.options('*splat', cors());
+const limiter = rateLimit({
+    windowMs: 1 * 60 * 1000,
+    max: 100,
+    message: 'Too many requests.',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use(limiter);
 app.use('/webhook', webhookRoutes);
 app.use(express.json());
 app.use('/auth', authRoutes);
