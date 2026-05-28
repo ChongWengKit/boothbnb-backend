@@ -127,7 +127,7 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
                 const paymentIntent = sessionWithDetails.payment_intent as Stripe.PaymentIntent;
                 const charge = paymentIntent?.latest_charge as Stripe.Charge;
                 await eventService.confirmUpdateBoothStatus(boothId, BoothType.SOLD);
-                await eventService.confirmBoothBooking(bookingId, PaymentStatus.PAID, {
+                await eventService.confirmBoothBooking(bookingId,  PaymentStatus.PAID, {
                     cardBrand: charge?.payment_method_details?.card?.brand ?? '',
                     cardLast4: charge?.payment_method_details?.card?.last4 ?? '',
                     stripeChargeId: charge?.id,

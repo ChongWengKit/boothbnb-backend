@@ -273,7 +273,7 @@ export const getBookingById = async (id: number) => {
 };
 
 export const confirmBoothBooking = async (
-  bookingId: number,
+  bookingId: number,  
   status: PaymentStatus,
   paymentDetails?: {
     cardBrand?: string | undefined;
@@ -283,7 +283,7 @@ export const confirmBoothBooking = async (
   }
 ) => {
   return prisma.booth_bookings.update({
-    where: { id: bookingId },
+    where: { id: bookingId , payment_status: PaymentStatus.PENDING} ,
     data: {
       payment_status: status,
       ...(paymentDetails && {
@@ -295,6 +295,7 @@ export const confirmBoothBooking = async (
     },
   });
 };
+
 export const updateEvent = async (id: number, data: UpdateEventRequest) => {
   const { title, currency_code, description, address, longitude, latitude, start_date, end_date, category, images, booths } = data;
 

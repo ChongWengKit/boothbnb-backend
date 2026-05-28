@@ -209,7 +209,7 @@ export const getBookingById = async (id) => {
 };
 export const confirmBoothBooking = async (bookingId, status, paymentDetails) => {
     return prisma.booth_bookings.update({
-        where: { id: bookingId },
+        where: { id: bookingId, payment_status: PaymentStatus.PENDING },
         data: {
             payment_status: status,
             ...(paymentDetails && {

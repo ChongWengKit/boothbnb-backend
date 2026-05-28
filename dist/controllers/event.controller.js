@@ -577,6 +577,7 @@ export const checkoutByUpdateEventReserved = async (req, res) => {
                     destination: host.stripe_account_id,
                 },
             },
+            expires_at: Math.floor(Date.now() / 1000) + (15 * 60),
             metadata: {
                 userId: vendorId.toString(),
                 bookingId: booking.id.toString(),
