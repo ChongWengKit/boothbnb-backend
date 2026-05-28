@@ -194,17 +194,28 @@ export const createEvent = async (hostId: number, data: CreateEventRequest) => {
 };
 
 export const createBoothBooking = async (userId: number, currency_code: string, boothId: number, boothName: string, eventName: string, amount: number) => {
-  return prisma.booth_bookings.create({
-    data: {
-      vendor_id: userId,
-      booth_id: boothId,
-      amount: amount,
-      currency_code: currency_code,
-      payment_status: PaymentStatus.PENDING,
-      booth_name: boothName,
-      event_name: eventName
-    },
-  });
+  return await prisma.$transaction([
+
+    prisma.booth_bookings.create({
+      data: {
+        vendor_id: userId,
+        booth_id: boothId,
+        amount: amount,
+        currency_code: currency_code,
+        payment_status: PaymentStatus.PENDING,
+        booth_name: boothName,
+        event_name: eventName
+      },
+    }),
+    prisma.booths.update({
+      where: { id: boothId, type: BoothType.AVAILABLE },
+      data: { type: BoothType.RESERVED as any },
+      select: {
+        id: true,
+        type: true
+      }
+    })
+  ]);
 };
 
 export const getPendingBookingsWithSessions = async () => {
@@ -250,7 +261,7 @@ export const getBookingById = async (id: number) => {
   return prisma.booth_bookings.findUnique({
     where: { id },
     include: {
-      
+
       booth: {
         include: {
           event: {
@@ -273,7 +284,7 @@ export const getBookingById = async (id: number) => {
 };
 
 export const confirmBoothBooking = async (
-  bookingId: number,  
+  bookingId: number,
   status: PaymentStatus,
   paymentDetails?: {
     cardBrand?: string | undefined;

@@ -135,17 +135,27 @@ export const createEvent = async (hostId, data) => {
     });
 };
 export const createBoothBooking = async (userId, currency_code, boothId, boothName, eventName, amount) => {
-    return prisma.booth_bookings.create({
-        data: {
-            vendor_id: userId,
-            booth_id: boothId,
-            amount: amount,
-            currency_code: currency_code,
-            payment_status: PaymentStatus.PENDING,
-            booth_name: boothName,
-            event_name: eventName
-        },
-    });
+    return await prisma.$transaction([
+        prisma.booth_bookings.create({
+            data: {
+                vendor_id: userId,
+                booth_id: boothId,
+                amount: amount,
+                currency_code: currency_code,
+                payment_status: PaymentStatus.PENDING,
+                booth_name: boothName,
+                event_name: eventName
+            },
+        }),
+        prisma.booths.update({
+            where: { id: boothId, type: BoothType.AVAILABLE },
+            data: { type: BoothType.RESERVED },
+            select: {
+                id: true,
+                type: true
+            }
+        })
+    ]);
 };
 export const getPendingBookingsWithSessions = async () => {
     return prisma.booth_bookings.findMany({

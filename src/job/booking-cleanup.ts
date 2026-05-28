@@ -15,8 +15,13 @@ export async function runBookingCleanup() {
         const pendingBookings = await eventService.getPendingBookingsWithSessions();
 
         for (const booking of pendingBookings) {
+            const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+            if (!booking.session_id && booking.booked_at < oneHourAgo) {
+                await eventService.confirmBoothBooking(booking.id, PaymentStatus.FAILED);
+                await eventService.confirmUpdateBoothStatus(booking.booth_id, BoothType.AVAILABLE);
+                continue;
+            }
             if (!booking.session_id) continue;
-
             try {
                 const session = await stripe.checkout.sessions.retrieve(booking.session_id, {
                     expand: ['payment_intent.latest_charge'],

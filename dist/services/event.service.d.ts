@@ -37,7 +37,7 @@ export declare const createEvent: (hostId: number, data: CreateEventRequest) => 
     id: number;
     slug: string;
 }>;
-export declare const createBoothBooking: (userId: number, currency_code: string, boothId: number, boothName: string, eventName: string, amount: number) => Promise<{
+export declare const createBoothBooking: (userId: number, currency_code: string, boothId: number, boothName: string, eventName: string, amount: number) => Promise<[{
     id: number;
     currency_code: string;
     amount: Prisma.Decimal;
@@ -52,7 +52,10 @@ export declare const createBoothBooking: (userId: number, currency_code: string,
     receiptUrl: string | null;
     booth_id: number;
     vendor_id: number;
-}>;
+}, {
+    id: number;
+    type: import("@prisma/client").$Enums.BoothType;
+}]>;
 export declare const getPendingBookingsWithSessions: () => Promise<{
     id: number;
     currency_code: string;

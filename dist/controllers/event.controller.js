@@ -544,14 +544,14 @@ export const checkoutByUpdateEventReserved = async (req, res) => {
         if (booth.type !== BoothType.AVAILABLE) {
             return res.status(400).json({ success: false, message: 'Booth is not available' });
         }
-        await eventService.updateBoothStatus(boothId, BoothType.RESERVED);
         const zeroDecimalCurrencies = ['JPY', 'KRW', 'VND', 'CLP', 'LAK'];
         const isZeroDecimal = zeroDecimalCurrencies.includes(currencyCode.toUpperCase());
         const calculatedPrice = (Number(booth.price) / baseRate) * targetRate * 1.05;
         const unitAmount = isZeroDecimal
             ? Math.round(calculatedPrice)
             : Math.round(calculatedPrice * 100);
-        const booking = await eventService.createBoothBooking(vendorId, currencyCode, parseInt(boothId), booth.name, event.title, Number(calculatedPrice));
+        const [bookingRecord, boothResult] = await eventService.createBoothBooking(vendorId, currencyCode, parseInt(boothId), booth.name, event.title, Number(calculatedPrice));
+        const bookingId = bookingRecord.id;
         const lineItems = [{
                 price_data: {
                     currency: currencyCode.toLowerCase(),
@@ -580,7 +580,7 @@ export const checkoutByUpdateEventReserved = async (req, res) => {
             expires_at: Math.floor(Date.now() / 1000) + (15 * 60),
             metadata: {
                 userId: vendorId.toString(),
-                bookingId: booking.id.toString(),
+                bookingId: bookingId.toString(),
                 boothId: boothId.toString(),
                 eventId: eventId.toString(),
                 eventTitle: event.title,
@@ -595,7 +595,7 @@ export const checkoutByUpdateEventReserved = async (req, res) => {
                 eventCurrency: event.currency_code
             }
         });
-        await eventService.updateBoothBooking(booking.id, session.id);
+        await eventService.updateBoothBooking(bookingId, session.id);
         return res.status(200).json({ success: true, message: 'Booth reserved successfully', data: session.url });
     }
     catch (error) {

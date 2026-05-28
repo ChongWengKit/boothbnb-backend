@@ -595,7 +595,7 @@ export const checkoutByUpdateEventReserved = async (
             return res.status(400).json({ success: false, message: `Currency ${currencyCode} not supported.` });
         }
         targetRate = Number(targetCurrency.rate);
-        
+
         const eventCurrency = await getCurrency(event.currency_code.toUpperCase());
         if (eventCurrency) {
             baseRate = Number(eventCurrency.rate);
@@ -619,8 +619,6 @@ export const checkoutByUpdateEventReserved = async (
         if (booth.type !== BoothType.AVAILABLE) {
             return res.status(400).json({ success: false, message: 'Booth is not available' });
         }
-        await eventService.updateBoothStatus(boothId, BoothType.RESERVED);
-
         const zeroDecimalCurrencies = ['JPY', 'KRW', 'VND', 'CLP', 'LAK'];
 
         const isZeroDecimal = zeroDecimalCurrencies.includes(currencyCode.toUpperCase());
@@ -630,8 +628,8 @@ export const checkoutByUpdateEventReserved = async (
         const unitAmount = isZeroDecimal
             ? Math.round(calculatedPrice)
             : Math.round(calculatedPrice * 100);
-        const booking = await eventService.createBoothBooking(vendorId, currencyCode, parseInt(boothId), booth.name, event.title, Number(calculatedPrice));
-
+        const [bookingRecord, boothResult] = await eventService.createBoothBooking(vendorId, currencyCode, parseInt(boothId), booth.name, event.title, Number(calculatedPrice));
+        const bookingId = bookingRecord.id;
         const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [{
             price_data: {
                 currency: currencyCode.toLowerCase(),
@@ -650,8 +648,8 @@ export const checkoutByUpdateEventReserved = async (
             success_url: `${process.env.FRONTEND_DOMAIN}/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${process.env.FRONTEND_DOMAIN}/dashboard/${encodeURIComponent(event.slug)}`,
             payment_intent_data: {
-                application_fee_amount: isZeroDecimal 
-                    ? Math.round(calculatedPrice * 0.05) 
+                application_fee_amount: isZeroDecimal
+                    ? Math.round(calculatedPrice * 0.05)
                     : Math.round(calculatedPrice * 100 * 0.05),
                 transfer_data: {
                     destination: host.stripe_account_id,
@@ -660,7 +658,7 @@ export const checkoutByUpdateEventReserved = async (
             expires_at: Math.floor(Date.now() / 1000) + (15 * 60),
             metadata: {
                 userId: vendorId.toString(),
-                bookingId: booking.id.toString(),
+                bookingId: bookingId.toString(),
                 boothId: boothId.toString(),
                 eventId: eventId.toString(),
                 eventTitle: event.title,
@@ -675,7 +673,7 @@ export const checkoutByUpdateEventReserved = async (
                 eventCurrency: event.currency_code
             }
         });
-        await eventService.updateBoothBooking(booking.id, session.id);
+        await eventService.updateBoothBooking(bookingId, session.id);
 
         return res.status(200).json({ success: true, message: 'Booth reserved successfully', data: session.url });
     } catch (error) {
