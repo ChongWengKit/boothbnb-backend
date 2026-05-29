@@ -37,6 +37,7 @@ model bookmarks {
   event_id   Int
   event      events    @relation(fields: [event_id], references: [id])
   created_at DateTime @default(now())
+  @@index([user_id, created_at])
   @@unique([user_id, event_id])
   @@map("bookmarks")
 }
@@ -58,7 +59,7 @@ model reset_tokens {
   user_id    Int
   created_at DateTime @default(now())
   expires_in DateTime
-
+  @@index([user_id, expires_in, created_at])
   @@map("reset_tokens")
 }
 
@@ -110,7 +111,14 @@ model events {
   slug        String
   images     event_images[]
   bookmarks  bookmarks[]
-  @@index([slug])
+  @@index([slug])    
+  @@index([status])              
+  @@index([host_id])              
+  @@index([start_date])        
+  @@index([end_date])            
+  @@index([latitude])            
+  @@index([longitude]) 
+  @@index([category])
   @@map("events")
 }
 
@@ -143,7 +151,7 @@ model booths {
   description   String?           @db.Text
   event          events           @relation(fields: [event_id], references: [id])
   bookings       booth_bookings[]
-
+  @@index([id, type])
   @@map("booths")
 }
 
@@ -165,7 +173,8 @@ model booth_bookings {
   cardLast4      String?       @db.VarChar(4)
   stripeChargeId String?       @db.VarChar(255)
   receiptUrl     String?       @db.Text
-
+  @@index([vendor_id])
+  @@index([payment_status])
   @@map("booth_bookings")
 }
 
@@ -187,7 +196,9 @@ model admin_requests {
   status     AdminRequestStatus @default(PENDING)
   created_at DateTime @default(now())
   updated_at DateTime? @updatedAt
-
+  @@index([action_type])
+  @@index([status])
+  @@index([user_id])
   @@map("admin_requests")
 }
 enum EventStatus {
@@ -211,7 +222,9 @@ model email_logs {
   email_id    String?          @db.VarChar(255)
   payload   Json
   attempts    Int      @default(0)
-
+  @@index([category])
+  @@index([status, attempts])
+  @@index([email_id])
   @@map("email_logs")
 }
 
@@ -223,6 +236,7 @@ model currency_exchange{
   updated_at DateTime @updatedAt
   events     events[]
   booth_bookings booth_bookings[]
+  @@index([is_enabled, currency])
 }
 
 enum EmailLogCategory {
