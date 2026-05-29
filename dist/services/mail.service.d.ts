@@ -53,7 +53,7 @@ export declare const sendHostApproveMail: (user_id: number, name: string, email:
     payload: import("@prisma/client/runtime/library").JsonValue;
     attempts: number;
 } | null>;
-export declare const sendVendorPaidMail: (user_id: number, hostName: string, hostEmail: string, name: string, email: string, eventName: string, boothName: string) => Promise<{
+export declare const sendVendorPaidMail: (user_id: number, name: string, email: string, vendorName: string, vendorEmail: string, eventName: string, boothName: string) => Promise<{
     id: number;
     user_id: number;
     category: pkg.$Enums.EmailLogCategory;

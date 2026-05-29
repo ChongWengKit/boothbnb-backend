@@ -87,9 +87,9 @@ export const attemptSend = async (logId) => {
                 break;
             case EmailLogCategory.VENDOR_PAID_NOTIFICATION:
                 emailOptions = {
-                    to: [payload.hostEmail],
+                    to: [payload.email],
                     subject: 'Payment Received for Booth Booking',
-                    react: VendorPaidNotificationEmail({ hostName: payload.hostName, vendorName: payload.vendorName, eventName: payload.eventName, boothName: payload.boothName, vendorEmail: payload.vendorEmail }),
+                    react: VendorPaidNotificationEmail({ hostName: payload.name, vendorName: payload.vendorName, eventName: payload.eventName, boothName: payload.boothName, vendorEmail: payload.vendorEmail }),
                 };
                 break;
             default:
@@ -146,8 +146,8 @@ export const sendHostApproveMail = async (user_id, name, email) => {
     const log = await logEmail(user_id, EmailLogCategory.HOST_APPROVED, { name, email });
     return attemptSend(log.id);
 };
-export const sendVendorPaidMail = async (user_id, hostName, hostEmail, name, email, eventName, boothName) => {
-    const log = await logEmail(user_id, EmailLogCategory.VENDOR_PAID_NOTIFICATION, { hostName, name, hostEmail, email, eventName, boothName });
+export const sendVendorPaidMail = async (user_id, name, email, vendorName, vendorEmail, eventName, boothName) => {
+    const log = await logEmail(user_id, EmailLogCategory.VENDOR_PAID_NOTIFICATION, { name, vendorName, email, vendorEmail, eventName, boothName });
     return attemptSend(log.id);
 };
 export const logEmail = async (user_id, category, payload, status = EmailLogStatus.PENDING, email_id) => {
