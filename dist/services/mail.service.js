@@ -205,30 +205,32 @@ export const getEmailLogById = async (id) => {
     });
 };
 export const getAllEmailLogs = async (page, limit, status, category, search) => {
-    const result = await prisma.email_logs.findMany({
-        where: {
-            ...(status && { status: status }),
-            ...(category && { category: category }),
-        },
-        orderBy: {
-            id: 'desc'
-        },
-        skip: (page - 1) * limit,
-        take: limit,
-        select: {
-            id: true,
-            user_id: true,
-            category: true,
-            payload: true,
-            status: true,
-            email_id: true,
-            attempts: true,
-        }
-    });
-    const count = await prisma.email_logs.count();
-    const totalItems = count;
+    const where = {
+        ...(status && { status }),
+        ...(category && { category }),
+    };
+    const [result, totalItems] = await Promise.all([
+        prisma.email_logs.findMany({
+            where,
+            orderBy: {
+                id: 'desc'
+            },
+            skip: (page - 1) * limit,
+            take: limit,
+            select: {
+                id: true,
+                user_id: true,
+                category: true,
+                payload: true,
+                status: true,
+                email_id: true,
+                attempts: true,
+            }
+        }),
+        prisma.email_logs.count({ where })
+    ]);
     const totalPages = Math.ceil(totalItems / limit);
-    const currentPage = page / limit + 1;
+    const currentPage = page;
     const itemsPerPage = limit;
     return {
         data: result,
