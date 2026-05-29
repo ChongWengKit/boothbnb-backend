@@ -655,7 +655,7 @@ export const checkoutByUpdateEventReserved = async (
                     destination: host.stripe_account_id,
                 },
             },
-            expires_at: Math.floor(Date.now() / 1000) + (15 * 60),
+            expires_at: Math.floor(Date.now() / 1000) + (30 * 60),
             metadata: {
                 userId: vendorId.toString(),
                 bookingId: bookingId.toString(),
@@ -677,6 +677,7 @@ export const checkoutByUpdateEventReserved = async (
 
         return res.status(200).json({ success: true, message: 'Booth reserved successfully', data: session.url });
     } catch (error) {
+        console.log(error)
         return res.status(500).json({ success: false, message: 'Internal server error', });
     }
 }
