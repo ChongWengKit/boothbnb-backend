@@ -208,6 +208,12 @@ export const getAllEmailLogs = async (page, limit, status, category, search) => 
     const where = {
         ...(status && { status }),
         ...(category && { category }),
+        ...(search && {
+            OR: [
+                { payload: { path: ['name'], string_contains: search } },
+                { payload: { path: ['email'], string_contains: search } }
+            ]
+        }),
     };
     const [result, totalItems] = await Promise.all([
         prisma.email_logs.findMany({
