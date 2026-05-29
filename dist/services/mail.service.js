@@ -146,8 +146,8 @@ export const sendHostApproveMail = async (user_id, name, email) => {
     const log = await logEmail(user_id, EmailLogCategory.HOST_APPROVED, { name, email });
     return attemptSend(log.id);
 };
-export const sendVendorPaidMail = async (user_id, hostName, hostEmail, vendorName, vendorEmail, eventName, boothName) => {
-    const log = await logEmail(user_id, EmailLogCategory.VENDOR_PAID_NOTIFICATION, { hostName, vendorName, hostEmail, vendorEmail, eventName, boothName });
+export const sendVendorPaidMail = async (user_id, hostName, hostEmail, vendorName, email, eventName, boothName) => {
+    const log = await logEmail(user_id, EmailLogCategory.VENDOR_PAID_NOTIFICATION, { hostName, vendorName, hostEmail, email, eventName, boothName });
     return attemptSend(log.id);
 };
 export const logEmail = async (user_id, category, payload, status = EmailLogStatus.PENDING, email_id) => {
