@@ -3,6 +3,7 @@ import { prisma } from '../lib/db.js';
 import { updateUserStripeStatus } from '../services/auth.service.js';
 import * as eventService from '../services/event.service.js';
 import * as emailService from '../services/mail.service.js';
+import * as authServices from '../services/auth.service.js';
 import { BoothType } from '../types/types.js';
 import { PaymentStatus } from '@prisma/client';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -158,6 +159,20 @@ export const handleStripeWebhook = async (req, res) => {
                 }
                 await eventService.confirmBoothBooking(bookingId, PaymentStatus.FAILED);
                 await eventService.confirmUpdateBoothStatus(boothId, BoothType.AVAILABLE);
+            }
+        }
+        else if (event.type === 'capability.updated') {
+            const capability = event.data.object;
+            const accountId = typeof capability.account === 'string'
+                ? capability.account
+                : capability.account.id;
+            if (capability.id === 'transfers') {
+                if (capability.status === 'disabled') {
+                    await authServices.disableUserStripePayoutStatus(accountId);
+                }
+                else if (capability.status === 'active') {
+                    await authServices.enableUserStripePayoutStatus(accountId);
+                }
             }
         }
         return res.status(200).json({ received: true });

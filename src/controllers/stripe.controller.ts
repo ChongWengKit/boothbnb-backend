@@ -4,6 +4,7 @@ import { prisma } from '../lib/db.js';
 import { updateUserStripeStatus } from '../services/auth.service.js';
 import * as eventService from '../services/event.service.js';
 import * as emailService from '../services/mail.service.js';
+import * as authServices from '../services/auth.service.js';
 import { BoothType } from '../types/types.js';
 import { PaymentStatus } from '@prisma/client';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
@@ -53,6 +54,7 @@ export const createStripeConnectAccount = async (req: Request, res: Response) =>
     }
 };
 
+
 export const checkStripeStatus = async (req: Request, res: Response) => {
     try {
         if (!req.user) {
@@ -84,7 +86,6 @@ export const checkStripeStatus = async (req: Request, res: Response) => {
                 payoutsEnabled = true;
             }
         }
-
         return res.json({ hasAccountId, payoutsEnabled, accountId: user.stripe_account_id });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -127,7 +128,7 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
                 const paymentIntent = sessionWithDetails.payment_intent as Stripe.PaymentIntent;
                 const charge = paymentIntent?.latest_charge as Stripe.Charge;
                 await eventService.confirmUpdateBoothStatus(boothId, BoothType.SOLD);
-                await eventService.confirmBoothBooking(bookingId,  PaymentStatus.PAID, {
+                await eventService.confirmBoothBooking(bookingId, PaymentStatus.PAID, {
                     cardBrand: charge?.payment_method_details?.card?.brand ?? '',
                     cardLast4: charge?.payment_method_details?.card?.last4 ?? '',
                     stripeChargeId: charge?.id,
@@ -167,7 +168,7 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
                         );
                     }
                 }
-                
+
             }
         }
         else if (event.type === 'checkout.session.expired') {
@@ -186,6 +187,19 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
                 await eventService.confirmBoothBooking(bookingId, PaymentStatus.FAILED);
                 await eventService.confirmUpdateBoothStatus(boothId, BoothType.AVAILABLE);
 
+            }
+        }
+        else if (event.type === 'capability.updated') {
+            const capability = event.data.object as Stripe.Capability;
+            const accountId: string = typeof capability.account === 'string'
+                ? capability.account
+                : capability.account.id;
+            if (capability.id === 'transfers') {
+                if ((capability.status as string) === 'disabled') {
+                    await authServices.disableUserStripePayoutStatus(accountId);
+                } else if ((capability.status as string) === 'active') {
+                    await authServices.enableUserStripePayoutStatus(accountId);
+                }
             }
         }
         return res.status(200).json({ received: true });

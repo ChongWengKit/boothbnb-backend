@@ -90,7 +90,7 @@ export const createEvent = async (req: Request<{}, {}, CreateEventRequest>, res:
         }
 
         const host = await findUserById(parseInt(hostId));
-        if (!host?.stripe_account_id) {
+        if (!host?.stripe_account_id || host?.stripe_payout_enabled === false) {
             return res.status(400).json({
                 success: false,
                 message: 'You must connect your Stripe account before creating an event.'
@@ -218,7 +218,7 @@ export const publishEvent = async (req: Request<{ slug: string }>, res: Response
         }
 
         const host = await findUserById(hostId);
-        if (!host?.stripe_account_id) {
+        if (!host?.stripe_account_id || host?.stripe_payout_enabled === false) {
             return res.status(400).json({
                 success: false,
                 message: 'You must connect your Stripe account before publishing an event.'

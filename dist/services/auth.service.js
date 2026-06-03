@@ -127,6 +127,22 @@ export const updateUserStripeStatus = async (user_id, charges_enabled) => {
         }
     });
 };
+export const disableUserStripePayoutStatus = async (stripe_id) => {
+    return prisma.users.updateMany({
+        where: { stripe_account_id: stripe_id.toString() },
+        data: {
+            stripe_payout_enabled: false
+        }
+    });
+};
+export const enableUserStripePayoutStatus = async (stripe_id) => {
+    return prisma.users.updateMany({
+        where: { stripe_account_id: stripe_id.toString() },
+        data: {
+            stripe_payout_enabled: true
+        }
+    });
+};
 export const updateUserProfilePhoto = async (userId, url) => {
     return prisma.users.update({
         where: { id: userId },

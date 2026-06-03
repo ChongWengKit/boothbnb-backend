@@ -62,7 +62,6 @@ export const googleSignIn = async (req: Request<{ token: string }>, res: Respons
       username: user.username,
       email: user.email,
       role: user.role,
-      is_stripe_connected: !!user.stripe_account_id
     }, secret, {
       expiresIn: '30d',
     });
@@ -167,7 +166,6 @@ export const googleSignUp = async (req: Request<{ token: string, role: Role }>, 
       username: user.username,
       email: user.email,
       role: user.role,
-      is_stripe_connected: !!user.stripe_account_id
     }, secret, {
       expiresIn: '30d',
     });
@@ -307,7 +305,6 @@ export const signin = async (req: Request<{}, {}, SignInRequest>, res: Response<
       username: user.username,
       email: user.email,
       role: user.role,
-      is_stripe_connected: (!!user.stripe_account_id && !!user.stripe_payout_enabled),
     }, secret, {
       expiresIn: '30d',
     });

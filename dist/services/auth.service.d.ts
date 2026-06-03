@@ -195,6 +195,8 @@ export declare const updateUserStripeStatus: (user_id: number, charges_enabled: 
     stripe_payout_enabled: boolean;
     profile_photo: string | null;
 }>;
+export declare const disableUserStripePayoutStatus: (stripe_id: string) => Promise<Prisma.BatchPayload>;
+export declare const enableUserStripePayoutStatus: (stripe_id: string) => Promise<Prisma.BatchPayload>;
 export declare const updateUserProfilePhoto: (userId: number, url: string) => Promise<{
     id: number;
     email: string;

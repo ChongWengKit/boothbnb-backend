@@ -78,7 +78,7 @@ export const createEvent = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Forbidden. Only hosts can create events.' });
         }
         const host = await findUserById(parseInt(hostId));
-        if (!host?.stripe_account_id) {
+        if (!host?.stripe_account_id || host?.stripe_payout_enabled === false) {
             return res.status(400).json({
                 success: false,
                 message: 'You must connect your Stripe account before creating an event.'
@@ -192,7 +192,7 @@ export const publishEvent = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Forbidden. You do not own this event.' });
         }
         const host = await findUserById(hostId);
-        if (!host?.stripe_account_id) {
+        if (!host?.stripe_account_id || host?.stripe_payout_enabled === false) {
             return res.status(400).json({
                 success: false,
                 message: 'You must connect your Stripe account before publishing an event.'
