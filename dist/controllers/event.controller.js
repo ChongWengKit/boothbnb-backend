@@ -526,7 +526,7 @@ export const checkoutByUpdateEventReserved = async (req, res) => {
             baseRate = Number(eventCurrency.rate);
         }
         const host = await findUserById(event.host_id);
-        if (!host || !host.stripe_account_id) {
+        if (!host || !host.stripe_account_id || host.stripe_payout_enabled === false) {
             return res.status(400).json({
                 success: false,
                 message: 'This event host has not connected their Stripe account yet.'
