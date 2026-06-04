@@ -1,9 +1,11 @@
-import { updateAdminRequest } from '../services/admin.service.js';
+import crypto from 'crypto';
+import { EmailLogCategory } from '@prisma/client';
+import { approveAdminRequestAndVerifyUser, createUserAndLogEmail, findAdminRequestById } from '../services/admin.service.js';
 import { ActionType, AdminRequestStatus, Role } from '../types/types.js';
-import { findUserById, verifyUser, findUserByEmail, createUser } from '../services/auth.service.js';
-import { sendAdminInviteMail } from '../services/mail.service.js';
+import { findUserById } from '../services/auth.service.js';
+import { findUserByEmail } from '../services/auth.service.js';
+import { attemptSend } from '../services/mail.service.js';
 import { getAdminRequests } from '../services/admin.service.js';
-import { sendHostApproveMail } from '../services/mail.service.js';
 export const registerAdmin = async (req, res) => {
     try {
         const { email } = req.body;
@@ -15,13 +17,13 @@ export const registerAdmin = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Email already registered.' });
         }
         const username = email.split('@')[0] + Math.floor(Math.random() * 1000);
-        const user = await createUser({
+        const { user, log } = await createUserAndLogEmail({
             email,
             username,
             role: Role.ADMIN,
-            is_verified: false,
-        });
-        await sendAdminInviteMail(email, username, user.id);
+            password: crypto.randomBytes(16).toString('hex'),
+        }, EmailLogCategory.ADMIN_INVITATION, { email, username });
+        await attemptSend(log.id);
         return res.status(201).json({ success: true, message: 'Admin invitation sent successfully.' });
     }
     catch (error) {
@@ -34,15 +36,21 @@ export const updateAdminApproval = async (req, res) => {
         if (!id || !status) {
             return res.status(400).json({ success: false, message: 'Invalid parameters.' });
         }
-        const result = await updateAdminRequest(id, status);
+        const result = await findAdminRequestById(id);
+        if (!result) {
+            return res.status(404).json({ success: false, message: `Admin request with id ${id} does not exist` });
+        }
         if (result.action_type === ActionType.HOST_APPROVAL) {
             if (status === AdminRequestStatus.APPROVED) {
                 const user = await findUserById(result.user_id);
                 if (!user) {
                     return res.status(404).json({ success: false, message: `User with id ${result.user_id} does not exist` });
                 }
-                await verifyUser(result.user_id);
-                await sendHostApproveMail(user.id, user.username, user.email);
+                const { log } = await approveAdminRequestAndVerifyUser(id, result.user_id, status, EmailLogCategory.HOST_APPROVED, {
+                    username: user.username,
+                    email: user.email,
+                });
+                await attemptSend(log.id);
             }
         }
         return res.status(200).json({

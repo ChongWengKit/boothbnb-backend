@@ -126,8 +126,8 @@ export const attemptSend = async (logId: number) => {
       },
     });
   } catch (e: any) {
-    console.error(e)
-    return await prisma.email_logs.update({
+
+    await prisma.email_logs.update({
       where: { id: log.id },
       data: {
         status: EmailLogStatus.FAILED,
@@ -135,36 +135,6 @@ export const attemptSend = async (logId: number) => {
       },
     });
   }
-};
-
-export const sendVerifyEmail = async (email: string, name: string, user_id: number) => {
-  const log = await logEmail(user_id, EmailLogCategory.VERIFICATION, { email, name });
-  return attemptSend(log.id);
-};
-
-export const sendAdminInviteMail = async (email: string, name: string, user_id: number) => {
-  const log = await logEmail(user_id, EmailLogCategory.ADMIN_INVITATION, { email, name });
-  return attemptSend(log.id);
-};
-
-export const sendResetPasswordMail = async (email: string, name: string, user_id: number) => {
-  const log = await logEmail(user_id, EmailLogCategory.PASSWORD_RESET, { email, name });
-  return attemptSend(log.id);
-};
-
-export const sendBookingConfirmedMail = async (email: string, name: string, event: string, booth: string, bookingId: number, user_id: number) => {
-  const log = await logEmail(user_id, EmailLogCategory.BOOKING_CONFIRMATION, { email, name, event, booth, bookingId });
-  return attemptSend(log.id);
-};
-
-export const sendHostApproveMail = async (user_id: number, name: string, email: string) => {
-  const log = await logEmail(user_id, EmailLogCategory.HOST_APPROVED, { name, email });
-  return attemptSend(log.id);
-};
-
-export const sendVendorPaidMail = async (user_id: number, name: string, email:string, vendorName: string, vendorEmail: string, eventName: string, boothName: string) => {
-  const log = await logEmail(user_id, EmailLogCategory.VENDOR_PAID_NOTIFICATION, { name, vendorName, email, vendorEmail, eventName, boothName });
-  return attemptSend(log.id);
 };
 
 export const logEmail = async (user_id: number, category: EmailLogCategory, payload: Record<string, any>, status: EmailLogStatus = EmailLogStatus.PENDING, email_id?: string ) => {

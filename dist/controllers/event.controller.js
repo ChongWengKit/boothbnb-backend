@@ -4,9 +4,11 @@ import { Role } from '../types/types.js';
 import Stripe from 'stripe';
 import jwt from 'jsonwebtoken';
 import * as bookmarkService from '../services/bookmark.service.js';
+import { PaymentStatus } from '@prisma/client';
 import { findUserById } from '../services/auth.service.js';
 import { getCurrencyRate } from '../services/currency.service.js';
 import { getCurrency } from '../services/currency.service.js';
+import { confirmBoothBookingWithStatusUpdate } from '../services/event.service.js';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
     apiVersion: '2026-03-25.dahlia',
 });
@@ -556,46 +558,53 @@ export const checkoutByUpdateEventReserved = async (req, res) => {
                 price_data: {
                     currency: currencyCode.toLowerCase(),
                     product_data: {
-                        name: event.title,
+                        name: event.title + ' - ' + booth.name,
                         images: event.images?.map(image => image.url) || [],
                     },
                     unit_amount: unitAmount,
                 },
                 quantity: 1,
             }];
-        const session = await stripe.checkout.sessions.create({
-            customer_email: req.user.email,
-            line_items: lineItems,
-            mode: 'payment',
-            success_url: `${process.env.FRONTEND_DOMAIN}/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.FRONTEND_DOMAIN}/dashboard/${encodeURIComponent(event.slug)}`,
-            payment_intent_data: {
-                application_fee_amount: isZeroDecimal
-                    ? Math.round(calculatedPrice * 0.05)
-                    : Math.round(calculatedPrice * 100 * 0.05),
-                transfer_data: {
-                    destination: host.stripe_account_id,
+        let session;
+        try {
+            session = await stripe.checkout.sessions.create({
+                customer_email: req.user.email,
+                line_items: lineItems,
+                mode: 'payment',
+                success_url: `${process.env.FRONTEND_DOMAIN}/success?session_id={CHECKOUT_SESSION_ID}`,
+                cancel_url: `${process.env.FRONTEND_DOMAIN}/dashboard/${encodeURIComponent(event.slug)}`,
+                payment_intent_data: {
+                    application_fee_amount: isZeroDecimal
+                        ? Math.round(calculatedPrice * 0.05)
+                        : Math.round(calculatedPrice * 100 * 0.05),
+                    transfer_data: {
+                        destination: host.stripe_account_id,
+                    },
                 },
-            },
-            expires_at: Math.floor(Date.now() / 1000) + (30 * 60),
-            metadata: {
-                userId: vendorId.toString(),
-                bookingId: bookingId.toString(),
-                boothId: boothId.toString(),
-                eventId: eventId.toString(),
-                eventTitle: event.title,
-                boothName: booth.name,
-                userRole: req.user.role,
-                userEmail: req.user.email,
-                userName: req.user.username,
-                amountPaid: (unitAmount / 100).toString(),
-                currency: currencyCode,
-                hostStripeAccount: host.stripe_account_id,
-                originalBoothPrice: booth.price.toString(),
-                eventCurrency: event.currency_code
-            }
-        });
-        await eventService.updateBoothBooking(bookingId, session.id);
+                expires_at: Math.floor(Date.now() / 1000) + (30 * 60),
+                metadata: {
+                    userId: vendorId.toString(),
+                    bookingId: bookingId.toString(),
+                    boothId: boothId.toString(),
+                    eventId: eventId.toString(),
+                    eventTitle: event.title,
+                    boothName: booth.name,
+                    userRole: req.user.role,
+                    userEmail: req.user.email,
+                    userName: req.user.username,
+                    amountPaid: (unitAmount / 100).toString(),
+                    currency: currencyCode,
+                    hostStripeAccount: host.stripe_account_id,
+                    originalBoothPrice: booth.price.toString(),
+                    eventCurrency: event.currency_code
+                }
+            });
+            await eventService.updateBoothBooking(bookingId, session.id);
+        }
+        catch (error) {
+            await confirmBoothBookingWithStatusUpdate(bookingId, boothId, PaymentStatus.FAILED, BoothType.AVAILABLE);
+            return res.status(500).json({ success: false, message: 'Failed to create Stripe checkout session' });
+        }
         return res.status(200).json({ success: true, message: 'Booth reserved successfully', data: session.url });
     }
     catch (error) {

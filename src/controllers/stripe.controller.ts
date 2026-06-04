@@ -7,6 +7,7 @@ import * as emailService from '../services/mail.service.js';
 import * as authServices from '../services/auth.service.js';
 import { BoothType } from '../types/types.js';
 import { PaymentStatus } from '@prisma/client';
+import { attemptSend } from '../services/mail.service.js';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: '2026-03-25.dahlia',
 });
@@ -127,46 +128,19 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
 
                 const paymentIntent = sessionWithDetails.payment_intent as Stripe.PaymentIntent;
                 const charge = paymentIntent?.latest_charge as Stripe.Charge;
-                await eventService.confirmUpdateBoothStatus(boothId, BoothType.SOLD);
-                await eventService.confirmBoothBooking(bookingId, PaymentStatus.PAID, {
+                
+                const result = await eventService.finalizeBoothBooking(bookingId, boothId, {
                     cardBrand: charge?.payment_method_details?.card?.brand ?? '',
                     cardLast4: charge?.payment_method_details?.card?.last4 ?? '',
                     stripeChargeId: charge?.id,
                     receiptUrl: charge?.receipt_url ?? '',
                 });
-                /*
-                if (metadata.hostStripeAccount && metadata.originalBoothPrice && metadata.eventCurrency && !paymentIntent.transfer_group) {
-                    const transferAmount = Math.round(Number(metadata.originalBoothPrice));
-                    await stripe.transfers.create({
-                        amount: transferAmount,
-                        currency: metadata.eventCurrency,
-                        destination: metadata.hostStripeAccount,
-                        transfer_group: `booking_${bookingId}`,
-                    });
 
+                if (result.confirmationLog) {
+                    await attemptSend(result.confirmationLog.id);
                 }
-                */
-                if (metadata.userEmail && metadata.userName && metadata.eventTitle && metadata.boothName && metadata.bookingId && metadata.userId) {
-                    const userEmail = metadata.userEmail;
-                    const userName = metadata.userName;
-                    const eventTitle = metadata.eventTitle;
-                    const boothName = metadata.boothName;
-                    const bookingId = parseInt(metadata.bookingId);
-                    const userId = parseInt(metadata.userId);
-                    await emailService.sendBookingConfirmedMail(userEmail, userName, eventTitle, boothName, bookingId, userId);
-
-                    const eventData = await eventService.getEventByBoothId(boothId);
-                    if (eventData && eventData.host) {
-                        await emailService.sendVendorPaidMail(
-                            eventData.host.id,
-                            eventData.host.username,
-                            eventData.host.email,
-                            userName,
-                            userEmail,
-                            eventTitle,
-                            boothName
-                        );
-                    }
+                if (result.vendorPaidLog) {
+                    await attemptSend(result.vendorPaidLog.id);
                 }
 
             }

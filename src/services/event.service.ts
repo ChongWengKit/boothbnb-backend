@@ -1,4 +1,4 @@
-import { Prisma, PaymentStatus } from '@prisma/client';
+import { Prisma, PaymentStatus, EmailLogCategory, EmailLogStatus } from '@prisma/client';
 import { CreateEventRequest, EventStatus, SearchEventRequest, UpdateEventRequest, BoothType } from '../types/types.js';
 import { prisma } from '../lib/db.js';
 import * as slugify from 'slugify';
@@ -307,6 +307,41 @@ export const confirmBoothBooking = async (
   });
 };
 
+export const confirmBoothBookingWithStatusUpdate = async (
+  bookingId: number,
+  boothId: number,
+  status: PaymentStatus,
+  boothStatus: BoothType,
+  paymentDetails?: {
+    cardBrand?: string | undefined;
+    cardLast4?: string | undefined;
+    stripeChargeId?: string | undefined;
+    receiptUrl?: string | undefined;
+  }
+) => {
+  return prisma.$transaction([
+    prisma.booth_bookings.update({
+      where: { id: bookingId, payment_status: PaymentStatus.PENDING },
+      data: {
+        payment_status: status,
+        ...(paymentDetails && {
+          cardBrand: paymentDetails.cardBrand as string | null,
+          cardLast4: paymentDetails.cardLast4 as string | null,
+          stripeChargeId: paymentDetails.stripeChargeId as string | null,
+          receiptUrl: paymentDetails.receiptUrl as string | null,
+        })
+      },
+    }),
+    prisma.booths.updateMany({
+      where: {
+        id: boothId,
+        type: BoothType.RESERVED
+      },
+      data: { type: boothStatus as any },
+    }),
+  ]);
+};
+
 export const updateEvent = async (id: number, data: UpdateEventRequest) => {
   const { title, currency_code, description, address, longitude, latitude, start_date, end_date, category, images, booths } = data;
 
@@ -590,6 +625,72 @@ export const getEventDetailsBySlug = async (slug: string) => {
     reserving_vendors: Array.from(reservingVendors),
     booking_summaries: bookingSummaries
   };
+};
+
+/**
+ * Atomically updates booking status, booth status, and logs notification emails.
+ */
+export const finalizeBoothBooking = async (
+  bookingId: number,
+  boothId: number,
+  paymentDetails?: {
+    cardBrand?: string | undefined;
+    cardLast4?: string | undefined;
+    stripeChargeId?: string | undefined;
+    receiptUrl?: string | undefined;
+  }
+) => {
+  return await prisma.$transaction(async (tx) => {
+    // 1. Update Booking Status
+    const booking = await tx.booth_bookings.update({
+      where: { id: bookingId, payment_status: PaymentStatus.PENDING },
+      data: {
+        payment_status: PaymentStatus.PAID,
+        ...(paymentDetails && {
+          cardBrand: paymentDetails.cardBrand as string | null,
+          cardLast4: paymentDetails.cardLast4 as string | null,
+          stripeChargeId: paymentDetails.stripeChargeId as string | null,
+          receiptUrl: paymentDetails.receiptUrl as string | null,
+        })
+      },
+      include: { vendor: true }
+    });
+
+    await tx.booths.updateMany({
+      where: { id: boothId, type: BoothType.RESERVED },
+      data: { type: BoothType.SOLD as any },
+    });
+
+    const event = await tx.events.findFirst({
+      where: { booths: { some: { id: boothId } } },
+      include: { host: true }
+    });
+
+    let confirmationLog = null;
+    let vendorPaidLog = null;
+
+    if (event?.host && booking.vendor) {
+      confirmationLog = await tx.email_logs.create({
+        data: {
+          user_id: booking.vendor_id,
+          category: EmailLogCategory.BOOKING_CONFIRMATION,
+          payload: { email: booking.vendor.email, name: booking.vendor.username, event: event.title, booth: booking.booth_name ?? "", bookingId: booking.id },
+          status: EmailLogStatus.PENDING,
+        },
+      });
+
+      vendorPaidLog = await tx.email_logs.create({
+        data: {
+          user_id: event.host.id,
+          category: EmailLogCategory.VENDOR_PAID_NOTIFICATION,
+          payload: { name: event.host.username, vendorName: booking.vendor.username, email: event.host.email, vendorEmail: booking.vendor.email, eventName: event.title, boothName: booking.booth_name ?? "" },
+          status: EmailLogStatus.PENDING,
+        },
+      });
+    }
+
+    return { confirmationLog, vendorPaidLog };
+  });
 };
 
 export const updateBoothStatus = async (boothId: number, status: BoothType) => {

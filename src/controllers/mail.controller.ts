@@ -1,10 +1,7 @@
 import { Request, Response } from 'express';
-import { prisma } from '../lib/db.js';
 import { EmailLogCategory, EmailLogStatus } from '@prisma/client';
 import { updateEmailLogStatus } from '../services/mail.service.js';
 import { getEmailLogById, attemptSend, getAllEmailLogs } from '../services/mail.service.js';
-import { Category } from '@prisma/client';
-import { sendVerifyEmail, sendResetPasswordMail, sendBookingConfirmedMail, sendHostApproveMail } from '../services/mail.service.js';
 export const handleResendWebhook = async (req: Request, res: Response) => {
     try {
         const { type, data } = req.body;

@@ -7,61 +7,7 @@ export declare const attemptSend: (logId: number) => Promise<{
     email_id: string | null;
     payload: import("@prisma/client/runtime/library").JsonValue;
     attempts: number;
-} | null>;
-export declare const sendVerifyEmail: (email: string, name: string, user_id: number) => Promise<{
-    id: number;
-    user_id: number;
-    category: pkg.$Enums.EmailLogCategory;
-    status: pkg.$Enums.EmailLogStatus;
-    email_id: string | null;
-    payload: import("@prisma/client/runtime/library").JsonValue;
-    attempts: number;
-} | null>;
-export declare const sendAdminInviteMail: (email: string, name: string, user_id: number) => Promise<{
-    id: number;
-    user_id: number;
-    category: pkg.$Enums.EmailLogCategory;
-    status: pkg.$Enums.EmailLogStatus;
-    email_id: string | null;
-    payload: import("@prisma/client/runtime/library").JsonValue;
-    attempts: number;
-} | null>;
-export declare const sendResetPasswordMail: (email: string, name: string, user_id: number) => Promise<{
-    id: number;
-    user_id: number;
-    category: pkg.$Enums.EmailLogCategory;
-    status: pkg.$Enums.EmailLogStatus;
-    email_id: string | null;
-    payload: import("@prisma/client/runtime/library").JsonValue;
-    attempts: number;
-} | null>;
-export declare const sendBookingConfirmedMail: (email: string, name: string, event: string, booth: string, bookingId: number, user_id: number) => Promise<{
-    id: number;
-    user_id: number;
-    category: pkg.$Enums.EmailLogCategory;
-    status: pkg.$Enums.EmailLogStatus;
-    email_id: string | null;
-    payload: import("@prisma/client/runtime/library").JsonValue;
-    attempts: number;
-} | null>;
-export declare const sendHostApproveMail: (user_id: number, name: string, email: string) => Promise<{
-    id: number;
-    user_id: number;
-    category: pkg.$Enums.EmailLogCategory;
-    status: pkg.$Enums.EmailLogStatus;
-    email_id: string | null;
-    payload: import("@prisma/client/runtime/library").JsonValue;
-    attempts: number;
-} | null>;
-export declare const sendVendorPaidMail: (user_id: number, name: string, email: string, vendorName: string, vendorEmail: string, eventName: string, boothName: string) => Promise<{
-    id: number;
-    user_id: number;
-    category: pkg.$Enums.EmailLogCategory;
-    status: pkg.$Enums.EmailLogStatus;
-    email_id: string | null;
-    payload: import("@prisma/client/runtime/library").JsonValue;
-    attempts: number;
-} | null>;
+} | null | undefined>;
 export declare const logEmail: (user_id: number, category: EmailLogCategory, payload: Record<string, any>, status?: EmailLogStatus, email_id?: string) => Promise<{
     id: number;
     user_id: number;

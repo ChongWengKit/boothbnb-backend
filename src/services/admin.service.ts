@@ -1,10 +1,21 @@
 import { prisma } from '../lib/db.js';
-import { ActionType, AdminRequestStatus } from '@prisma/client';
+import { ActionType, AdminRequestStatus, Prisma } from '@prisma/client';
+import { EmailLogCategory } from '@prisma/client';
+import { EmailLogStatus } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 export const createAdminRequest = async (action_type: ActionType, userId: number) => {
   return prisma.admin_requests.create({
     data: {
       action_type: action_type,
       user_id: userId,
+    },
+  });
+};
+
+export const findAdminRequestById = async (id: number) => {
+  return prisma.admin_requests.findUnique({
+    where: {
+      id,
     },
   });
 };
@@ -93,3 +104,65 @@ export const getAdminRequests = async (page = 1, limit = 10, action_type?: Actio
   };
 };
 
+export const createUserAndLogEmail = async (data: Prisma.usersCreateInput, category: EmailLogCategory, payload: Record<string, any>, status: EmailLogStatus = EmailLogStatus.PENDING, email_id?: string) => {
+    const tx = await prisma.$transaction(async (tx) => {
+      const newUser = await tx.users.create({ data });
+      const log = await tx.email_logs.create({
+        data: {
+          user_id: newUser.id,
+          category,
+          payload,
+          status,
+          email_id: email_id ?? null,
+        },
+      });
+      return { user: newUser, log };
+    });
+    return tx;
+
+};
+
+export const approveAdminRequestAndVerifyUser = async (
+  requestId: number,
+  userId: number,
+  status: AdminRequestStatus,
+  emailCategory: EmailLogCategory,
+  emailPayload: Record<string, any>
+) => {
+  return prisma.$transaction(async (tx) => {
+    const request = await tx.admin_requests.update({
+      where: { id: requestId, status: AdminRequestStatus.PENDING },
+      data: { status },
+    });
+
+    const user = await tx.users.update({
+      where: { id: userId },
+      data: { is_verified: true },
+    });
+
+    const log = await tx.email_logs.create({
+      data: {
+        user_id: userId,
+        category: emailCategory,
+        payload: emailPayload,
+        status: EmailLogStatus.PENDING,
+      },
+    });
+
+    return { log };
+  });
+};
+
+
+export const deleteUserAndAdminRequests = async (userId: number) => {
+  return prisma.$transaction([
+    prisma.admin_requests.deleteMany({
+      where: {
+        user_id: userId,
+      },
+    }),
+    prisma.users.delete({
+      where: { id: userId },
+    }),
+  ]);
+};

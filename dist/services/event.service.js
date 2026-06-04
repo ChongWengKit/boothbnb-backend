@@ -1,4 +1,4 @@
-import { PaymentStatus } from '@prisma/client';
+import { PaymentStatus, EmailLogCategory, EmailLogStatus } from '@prisma/client';
 import { EventStatus, BoothType } from '../types/types.js';
 import { prisma } from '../lib/db.js';
 import * as slugify from 'slugify';
@@ -230,6 +230,29 @@ export const confirmBoothBooking = async (bookingId, status, paymentDetails) => 
             })
         },
     });
+};
+export const confirmBoothBookingWithStatusUpdate = async (bookingId, boothId, status, boothStatus, paymentDetails) => {
+    return prisma.$transaction([
+        prisma.booth_bookings.update({
+            where: { id: bookingId, payment_status: PaymentStatus.PENDING },
+            data: {
+                payment_status: status,
+                ...(paymentDetails && {
+                    cardBrand: paymentDetails.cardBrand,
+                    cardLast4: paymentDetails.cardLast4,
+                    stripeChargeId: paymentDetails.stripeChargeId,
+                    receiptUrl: paymentDetails.receiptUrl,
+                })
+            },
+        }),
+        prisma.booths.updateMany({
+            where: {
+                id: boothId,
+                type: BoothType.RESERVED
+            },
+            data: { type: boothStatus },
+        }),
+    ]);
 };
 export const updateEvent = async (id, data) => {
     const { title, currency_code, description, address, longitude, latitude, start_date, end_date, category, images, booths } = data;
@@ -499,6 +522,56 @@ export const getEventDetailsBySlug = async (slug) => {
         reserving_vendors: Array.from(reservingVendors),
         booking_summaries: bookingSummaries
     };
+};
+/**
+ * Atomically updates booking status, booth status, and logs notification emails.
+ */
+export const finalizeBoothBooking = async (bookingId, boothId, paymentDetails) => {
+    return await prisma.$transaction(async (tx) => {
+        // 1. Update Booking Status
+        const booking = await tx.booth_bookings.update({
+            where: { id: bookingId, payment_status: PaymentStatus.PENDING },
+            data: {
+                payment_status: PaymentStatus.PAID,
+                ...(paymentDetails && {
+                    cardBrand: paymentDetails.cardBrand,
+                    cardLast4: paymentDetails.cardLast4,
+                    stripeChargeId: paymentDetails.stripeChargeId,
+                    receiptUrl: paymentDetails.receiptUrl,
+                })
+            },
+            include: { vendor: true }
+        });
+        await tx.booths.updateMany({
+            where: { id: boothId, type: BoothType.RESERVED },
+            data: { type: BoothType.SOLD },
+        });
+        const event = await tx.events.findFirst({
+            where: { booths: { some: { id: boothId } } },
+            include: { host: true }
+        });
+        let confirmationLog = null;
+        let vendorPaidLog = null;
+        if (event?.host && booking.vendor) {
+            confirmationLog = await tx.email_logs.create({
+                data: {
+                    user_id: booking.vendor_id,
+                    category: EmailLogCategory.BOOKING_CONFIRMATION,
+                    payload: { email: booking.vendor.email, name: booking.vendor.username, event: event.title, booth: booking.booth_name ?? "", bookingId: booking.id },
+                    status: EmailLogStatus.PENDING,
+                },
+            });
+            vendorPaidLog = await tx.email_logs.create({
+                data: {
+                    user_id: event.host.id,
+                    category: EmailLogCategory.VENDOR_PAID_NOTIFICATION,
+                    payload: { name: event.host.username, vendorName: booking.vendor.username, email: event.host.email, vendorEmail: booking.vendor.email, eventName: event.title, boothName: booking.booth_name ?? "" },
+                    status: EmailLogStatus.PENDING,
+                },
+            });
+        }
+        return { confirmationLog, vendorPaidLog };
+    });
 };
 export const updateBoothStatus = async (boothId, status) => {
     return prisma.booths.update({

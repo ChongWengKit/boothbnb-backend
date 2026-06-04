@@ -212,6 +212,27 @@ export declare const confirmBoothBooking: (bookingId: number, status: PaymentSta
     booth_id: number;
     vendor_id: number;
 }>;
+export declare const confirmBoothBookingWithStatusUpdate: (bookingId: number, boothId: number, status: PaymentStatus, boothStatus: BoothType, paymentDetails?: {
+    cardBrand?: string | undefined;
+    cardLast4?: string | undefined;
+    stripeChargeId?: string | undefined;
+    receiptUrl?: string | undefined;
+}) => Promise<[{
+    id: number;
+    currency_code: string;
+    amount: Prisma.Decimal;
+    payment_status: import("@prisma/client").$Enums.PaymentStatus;
+    booked_at: Date;
+    session_id: string | null;
+    booth_name: string | null;
+    event_name: string | null;
+    cardBrand: string | null;
+    cardLast4: string | null;
+    stripeChargeId: string | null;
+    receiptUrl: string | null;
+    booth_id: number;
+    vendor_id: number;
+}, Prisma.BatchPayload]>;
 export declare const updateEvent: (id: number, data: UpdateEventRequest) => Promise<{
     id: number;
     category: import("@prisma/client").$Enums.Category;
@@ -280,6 +301,10 @@ export declare const getEventsByHostId: (hostId: number, page?: number, limit?: 
         _count: {
             booths: number;
         };
+        booths: {
+            id: number;
+            type: import("@prisma/client").$Enums.BoothType;
+        }[];
         title: string;
         address: string;
         start_date: Date;
@@ -288,10 +313,6 @@ export declare const getEventsByHostId: (hostId: number, page?: number, limit?: 
         latitude: number;
         longitude: number;
         slug: string;
-        booths: {
-            id: number;
-            type: import("@prisma/client").$Enums.BoothType;
-        }[];
         images: {
             url: string;
         }[];
@@ -303,14 +324,14 @@ export declare const getEventsByIds: (ids: number[]) => Promise<{
     _count: {
         booths: number;
     };
-    title: string;
-    address: string;
-    start_date: Date;
-    end_date: Date;
     booths: {
         id: number;
         type: import("@prisma/client").$Enums.BoothType;
     }[];
+    title: string;
+    address: string;
+    start_date: Date;
+    end_date: Date;
     images: {
         url: string;
     }[];
@@ -320,15 +341,6 @@ export declare const getEventBySlug: (slug: string, statuses?: EventStatus[]) =>
     _count: {
         bookmarks: number;
     };
-    title: string;
-    description: string;
-    address: string;
-    start_date: Date;
-    end_date: Date;
-    status: import("@prisma/client").$Enums.EventStatus;
-    latitude: number;
-    longitude: number;
-    slug: string;
     booths: {
         id: number;
         name: string;
@@ -341,6 +353,15 @@ export declare const getEventBySlug: (slug: string, statuses?: EventStatus[]) =>
         rotation: number;
         price: Prisma.Decimal;
     }[];
+    title: string;
+    description: string;
+    address: string;
+    start_date: Date;
+    end_date: Date;
+    status: import("@prisma/client").$Enums.EventStatus;
+    latitude: number;
+    longitude: number;
+    slug: string;
     images: {
         url: string;
     }[];
@@ -352,6 +373,34 @@ export declare const getEventBySlug: (slug: string, statuses?: EventStatus[]) =>
     };
 } | null>;
 export declare const getEventDetailsBySlug: (slug: string) => Promise<any>;
+/**
+ * Atomically updates booking status, booth status, and logs notification emails.
+ */
+export declare const finalizeBoothBooking: (bookingId: number, boothId: number, paymentDetails?: {
+    cardBrand?: string | undefined;
+    cardLast4?: string | undefined;
+    stripeChargeId?: string | undefined;
+    receiptUrl?: string | undefined;
+}) => Promise<{
+    confirmationLog: {
+        id: number;
+        user_id: number;
+        category: import("@prisma/client").$Enums.EmailLogCategory;
+        status: import("@prisma/client").$Enums.EmailLogStatus;
+        email_id: string | null;
+        payload: Prisma.JsonValue;
+        attempts: number;
+    } | null;
+    vendorPaidLog: {
+        id: number;
+        user_id: number;
+        category: import("@prisma/client").$Enums.EmailLogCategory;
+        status: import("@prisma/client").$Enums.EmailLogStatus;
+        email_id: string | null;
+        payload: Prisma.JsonValue;
+        attempts: number;
+    } | null;
+}>;
 export declare const updateBoothStatus: (boothId: number, status: BoothType) => Promise<{
     id: number;
     type: import("@prisma/client").$Enums.BoothType;

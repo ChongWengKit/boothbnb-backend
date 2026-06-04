@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
 import { v2 as cloudinary } from 'cloudinary';
 import { ApiResponse } from '../types/types.js';
-import { findUserByEmail, createUser } from '../services/auth.service.js';
+import { findUserByEmail, createUser, resetUserPasswordAndRemoveToken, finalizeUserRegistrationAndRemoveToken } from '../services/auth.service.js';
 import jwt from 'jsonwebtoken';
 import { Role } from '../types/types.js';
 import { SignInResponse } from '../types/types.js';
 import crypto from 'crypto';
 import { prisma } from '../lib/db.js';
 import { Prisma, EmailLogCategory, EmailLogStatus } from '@prisma/client';
-import { sendVerifyEmail, sendResetPasswordMail, logEmail } from '../services/mail.service.js';
+import { logEmail, attemptSend } from '../services/mail.service.js';
 import { deleteUser } from '../services/auth.service.js';
 import { findUserById, updateUserPassword } from '../services/auth.service.js';
 import { getResetTokenByToken, deleteResetTokenByToken } from '../services/auth.service.js';
@@ -18,8 +18,8 @@ import { SignInRequest } from '../types/types.js';
 import { findResetTokenByUserId } from '../services/auth.service.js';
 import { deleteVerifyTokenByToken, getVerifyTokenByToken } from '../services/auth.service.js';
 import { verifyUser } from '../services/auth.service.js';
-import { createAdminRequest, deleteAdminRequestByUserId } from '../services/admin.service.js';
-import { getAdminTokenByToken, deleteAdminTokenByToken, finalizeUserRegistration } from '../services/auth.service.js';
+import { createAdminRequest, deleteAdminRequestByUserId, deleteUserAndAdminRequests } from '../services/admin.service.js';
+import { getAdminTokenByToken, deleteAdminTokenByToken,  } from '../services/auth.service.js';
 import { ActionType } from '../types/types.js';
 //test vercel
 export const googleSignIn = async (req: Request<{ token: string }>, res: Response<ApiResponse<SignInResponse>>) => {
@@ -132,19 +132,18 @@ export const googleSignUp = async (req: Request<{ token: string, role: Role }>, 
         } catch (uploadError) {
         }
       }
-      user = await createUser({
+      ({ user } = await createUser({
         email,
         username: name,
         role: role,
         is_verified: is_verfied,
         profile_photo: profile_photo,
-      });
+      }, false));
     }
     else {
       return res.status(409).json({ success: false, message: 'User already exists. Please sign in instead.' });
     }
     if (role === Role.HOST) {
-      await createAdminRequest(ActionType.HOST_APPROVAL, user.id);
       return res.status(201).json({
         success: true,
         message: 'Extra action required, please contact site admin.',
@@ -213,12 +212,7 @@ export const resetPassword = async (req: Request<{ password: string, token: stri
     const salt = crypto.randomBytes(16).toString('hex');
     const hashedPassword = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
 
-    const updatedUser = await updateUserPassword(resetToken.user_id, hashedPassword, salt);
-    if (!updatedUser) {
-      return res.status(500).json({ success: false, message: 'Failed to update user password.' });
-    }
-
-    await deleteResetTokenByToken(hashedToken);
+    await resetUserPasswordAndRemoveToken(resetToken.user_id, hashedPassword, salt, hashedToken);
 
     return res.status(200).json({
       success: true,
@@ -257,15 +251,12 @@ export const adminSignup = async (req: Request, res: Response) => {
 
     const salt = crypto.randomBytes(16).toString('hex');
     const hashedPassword = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
-
-    await finalizeUserRegistration(user.id, {
+    await finalizeUserRegistrationAndRemoveToken(user.id, {
       username,
       password: hashedPassword,
       salt,
       is_verified: true
-    });
-
-    await deleteAdminTokenByToken(hashedToken);
+    }, hashedToken);
 
     return res.status(200).json({ success: true, message: 'Admin account set up successfully. You can now log in.' });
   } catch (error) {
@@ -355,8 +346,7 @@ export const signup = async (req: Request<{}, {}, SignupRequest>, res: Response<
           user_id: existingEmail.id,
         },
       });
-      await deleteAdminRequestByUserId(existingEmail.id);
-      await deleteUser(existingEmail.id);
+      await deleteUserAndAdminRequests(existingEmail.id);
     }
 
     const existingUsername = await findUserByUsername(username);
@@ -371,16 +361,15 @@ export const signup = async (req: Request<{}, {}, SignupRequest>, res: Response<
     const salt = crypto.randomBytes(16).toString('hex');
     const hashedPassword = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
 
-    const user = await createUser({
+    const { user, log } = await createUser({
       email,
       username,
       password: hashedPassword,
       role,
       salt,
-    });
+    }, true);
 
     if (role === Role.HOST) {
-      await createAdminRequest(ActionType.HOST_APPROVAL, user.id);
       return res.status(200).json({
         success: true,
         message: 'Extra action required, please contact site admin.',
@@ -392,9 +381,9 @@ export const signup = async (req: Request<{}, {}, SignupRequest>, res: Response<
         },
       });
     }
-
-    await sendVerifyEmail(email, username, user.id);
-
+    if (log) {
+      await attemptSend(log.id);
+    }
 
     return res.status(201).json({
       success: true,
@@ -423,7 +412,8 @@ export const forgotPassword = async (req: Request<{ email: string }>, res: Respo
     if (!user) {
       return res.status(404).json({ success: false, message: 'User with email does not exist.' });
     }
-    await sendResetPasswordMail(email, user.username, user.id);
+    const log = await logEmail(user.id, EmailLogCategory.PASSWORD_RESET, { email, name: user.username });
+    attemptSend(log.id);
     return res.status(200).json({ success: true, message: 'Reset password email sent successfully.' });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Internal server error' });

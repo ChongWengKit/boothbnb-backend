@@ -1,5 +1,5 @@
 
-import { Prisma } from '@prisma/client';
+import { Prisma, ActionType, Role, EmailLogCategory, EmailLogStatus } from '@prisma/client';
 import { prisma } from '../lib/db.js';
 
 export const findUserByEmail = async (email: string) => {
@@ -22,9 +22,34 @@ export const findUserByUsername = async (username: string) => {
   });
 };
 
-export const createUser = async (data: Prisma.usersCreateInput) => {
-  return prisma.users.create({
-    data,
+export const createUser = async (data: Prisma.usersCreateInput, sendEmail: boolean) => {
+  return prisma.$transaction(async (tx) => {
+    const user = await tx.users.create({
+      data,
+    });
+
+    let log = null;
+    if (data.role === Role.HOST) {
+      await tx.admin_requests.create({
+        data: {
+          action_type: ActionType.HOST_APPROVAL,
+          user_id: user.id,
+        },
+      });
+    }
+    else if (sendEmail)
+    {
+      log = await tx.email_logs.create({
+        data: {
+          user_id: user.id,
+          category: EmailLogCategory.VERIFICATION,
+          payload: { email: user.email, name: user.username },
+          status: EmailLogStatus.PENDING,
+          email_id: null,
+        },
+      });
+    }
+    return { user, log };
   });
 };
 
@@ -117,13 +142,6 @@ export const deleteAdminTokensByEmail = async (email: string) => {
   });
 };
 
-export const finalizeUserRegistration = async (userId: number, data: { username: string; password?: string; salt?: string; is_verified: boolean }) => {
-  return prisma.users.update({
-    where: { id: userId },
-    data,
-  });
-};
-
 export const findResetTokenByUserId = async (user_id: number) => {
   return prisma.reset_tokens.findFirst({
     where: {
@@ -170,4 +188,28 @@ export const updateUserProfilePhoto = async (userId: number, url: string) => {
       profile_photo: url
     }
   });
+};
+
+export const resetUserPasswordAndRemoveToken = async (userId: number, password: string, salt: string, token: string) => {
+  return prisma.$transaction([
+    prisma.users.update({
+      where: { id: userId },
+      data: { password, salt },
+    }),
+    prisma.reset_tokens.delete({
+      where: { token },
+    }),
+  ]);
+};
+
+export const finalizeUserRegistrationAndRemoveToken = async (userId: number, data: { username: string; password?: string; salt?: string; is_verified: boolean }, token: string) => {
+  return prisma.$transaction([
+    prisma.users.update({
+      where: { id: userId },
+      data,
+    }),
+    prisma.admin_tokens.delete({
+      where: { token },
+    }),
+  ]);
 };

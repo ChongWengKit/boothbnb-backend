@@ -21,19 +21,30 @@ export declare const findUserByUsername: (username: string) => Promise<{
     role: import("@prisma/client").$Enums.Role;
     profile_photo: string | null;
 } | null>;
-export declare const createUser: (data: Prisma.usersCreateInput) => Promise<{
-    id: number;
-    email: string;
-    username: string;
-    password: string | null;
-    salt: string | null;
-    is_verified: boolean;
-    created_at: Date;
-    updated_at: Date;
-    role: import("@prisma/client").$Enums.Role;
-    stripe_account_id: string | null;
-    stripe_payout_enabled: boolean;
-    profile_photo: string | null;
+export declare const createUser: (data: Prisma.usersCreateInput, sendEmail: boolean) => Promise<{
+    user: {
+        id: number;
+        email: string;
+        username: string;
+        password: string | null;
+        salt: string | null;
+        is_verified: boolean;
+        created_at: Date;
+        updated_at: Date;
+        role: import("@prisma/client").$Enums.Role;
+        stripe_account_id: string | null;
+        stripe_payout_enabled: boolean;
+        profile_photo: string | null;
+    };
+    log: {
+        id: number;
+        user_id: number;
+        category: import("@prisma/client").$Enums.EmailLogCategory;
+        status: import("@prisma/client").$Enums.EmailLogStatus;
+        email_id: string | null;
+        payload: Prisma.JsonValue;
+        attempts: number;
+    } | null;
 }>;
 export declare const findUserById: (id: number) => Promise<{
     id: number;
@@ -155,25 +166,6 @@ export declare const deleteAdminTokenByToken: (token: string) => Promise<{
     expires_in: Date;
 }>;
 export declare const deleteAdminTokensByEmail: (email: string) => Promise<Prisma.BatchPayload>;
-export declare const finalizeUserRegistration: (userId: number, data: {
-    username: string;
-    password?: string;
-    salt?: string;
-    is_verified: boolean;
-}) => Promise<{
-    id: number;
-    email: string;
-    username: string;
-    password: string | null;
-    salt: string | null;
-    is_verified: boolean;
-    created_at: Date;
-    updated_at: Date;
-    role: import("@prisma/client").$Enums.Role;
-    stripe_account_id: string | null;
-    stripe_payout_enabled: boolean;
-    profile_photo: string | null;
-}>;
 export declare const findResetTokenByUserId: (user_id: number) => Promise<{
     id: number;
     created_at: Date;
@@ -211,4 +203,49 @@ export declare const updateUserProfilePhoto: (userId: number, url: string) => Pr
     stripe_payout_enabled: boolean;
     profile_photo: string | null;
 }>;
+export declare const resetUserPasswordAndRemoveToken: (userId: number, password: string, salt: string, token: string) => Promise<[{
+    id: number;
+    email: string;
+    username: string;
+    password: string | null;
+    salt: string | null;
+    is_verified: boolean;
+    created_at: Date;
+    updated_at: Date;
+    role: import("@prisma/client").$Enums.Role;
+    stripe_account_id: string | null;
+    stripe_payout_enabled: boolean;
+    profile_photo: string | null;
+}, {
+    id: number;
+    created_at: Date;
+    token: string;
+    expires_in: Date;
+    user_id: number;
+}]>;
+export declare const finalizeUserRegistrationAndRemoveToken: (userId: number, data: {
+    username: string;
+    password?: string;
+    salt?: string;
+    is_verified: boolean;
+}, token: string) => Promise<[{
+    id: number;
+    email: string;
+    username: string;
+    password: string | null;
+    salt: string | null;
+    is_verified: boolean;
+    created_at: Date;
+    updated_at: Date;
+    role: import("@prisma/client").$Enums.Role;
+    stripe_account_id: string | null;
+    stripe_payout_enabled: boolean;
+    profile_photo: string | null;
+}, {
+    id: number;
+    email: string;
+    created_at: Date;
+    token: string;
+    expires_in: Date;
+}]>;
 //# sourceMappingURL=auth.service.d.ts.map

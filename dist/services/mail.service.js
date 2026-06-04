@@ -116,8 +116,7 @@ export const attemptSend = async (logId) => {
         });
     }
     catch (e) {
-        console.error(e);
-        return await prisma.email_logs.update({
+        await prisma.email_logs.update({
             where: { id: log.id },
             data: {
                 status: EmailLogStatus.FAILED,
@@ -125,30 +124,6 @@ export const attemptSend = async (logId) => {
             },
         });
     }
-};
-export const sendVerifyEmail = async (email, name, user_id) => {
-    const log = await logEmail(user_id, EmailLogCategory.VERIFICATION, { email, name });
-    return attemptSend(log.id);
-};
-export const sendAdminInviteMail = async (email, name, user_id) => {
-    const log = await logEmail(user_id, EmailLogCategory.ADMIN_INVITATION, { email, name });
-    return attemptSend(log.id);
-};
-export const sendResetPasswordMail = async (email, name, user_id) => {
-    const log = await logEmail(user_id, EmailLogCategory.PASSWORD_RESET, { email, name });
-    return attemptSend(log.id);
-};
-export const sendBookingConfirmedMail = async (email, name, event, booth, bookingId, user_id) => {
-    const log = await logEmail(user_id, EmailLogCategory.BOOKING_CONFIRMATION, { email, name, event, booth, bookingId });
-    return attemptSend(log.id);
-};
-export const sendHostApproveMail = async (user_id, name, email) => {
-    const log = await logEmail(user_id, EmailLogCategory.HOST_APPROVED, { name, email });
-    return attemptSend(log.id);
-};
-export const sendVendorPaidMail = async (user_id, name, email, vendorName, vendorEmail, eventName, boothName) => {
-    const log = await logEmail(user_id, EmailLogCategory.VENDOR_PAID_NOTIFICATION, { name, vendorName, email, vendorEmail, eventName, boothName });
-    return attemptSend(log.id);
 };
 export const logEmail = async (user_id, category, payload, status = EmailLogStatus.PENDING, email_id) => {
     return prisma.email_logs.create({
