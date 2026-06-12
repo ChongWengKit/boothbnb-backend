@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { prisma } from './lib/db.js';
 import authRoutes from './routes/auth.routes.js';
 import eventRoutes from './routes/event.routes.js';
 import hostRoutes from './routes/host.routes.js';
@@ -67,4 +66,6 @@ app.use('/site', siteRoutes)
 app.use('/admin', adminRoutes)
 app.use('/cron', cronRoutes)
 app.use('/currency', currencyRoutes)
-export default app;
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
