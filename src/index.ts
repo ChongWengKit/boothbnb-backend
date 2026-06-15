@@ -21,11 +21,14 @@ import './job/email-retry.js';
 import './job/email-sync.js';
 import './job/currency-rate.js'
 dotenv.config();
+import swaggerUi from 'swagger-ui-express';
+import swaggerFile from './swagger-output.json' with { type: 'json' };
 const app = express();
 const port = process.env.PORT || 3001;
 const allowedOrigins = [
   process.env.FRONTEND_DOMAIN
 ];
+app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerFile));
 app.use(cors({
 
   origin: (origin, callback) => {
