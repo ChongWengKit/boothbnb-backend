@@ -1,5 +1,5 @@
 import swaggerAutogen from 'swagger-autogen';
-const domain = process.env.DOMAIN || 'localhost:3001';
+const domain = process.env.BACKEND_DOMAIN || 'localhost:3001';
 
 const doc = {
   info: { title: 'Boothbnb API', description: '' },
