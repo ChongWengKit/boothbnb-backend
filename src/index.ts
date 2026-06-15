@@ -28,7 +28,15 @@ const port = process.env.PORT || 3001;
 const allowedOrigins = [
   process.env.FRONTEND_DOMAIN
 ];
-app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerFile));
+const swaggerOptions = {
+  customCssUrl: 'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui.min.css',
+  customJs: [
+    'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-bundle.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-standalone-preset.js'
+  ]
+};
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile, swaggerOptions));
 app.use(cors({
 
   origin: (origin, callback) => {
