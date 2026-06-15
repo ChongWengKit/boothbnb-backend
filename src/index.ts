@@ -36,7 +36,7 @@ const swaggerOptions = {
   ]
 };
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile, swaggerOptions));
+app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerFile, swaggerOptions));
 app.use(cors({
 
   origin: (origin, callback) => {
