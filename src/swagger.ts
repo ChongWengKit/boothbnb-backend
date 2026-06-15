@@ -8,6 +8,6 @@ const doc = {
 };
 
 const outputFile = './swagger-output.json';
-const endpointsFiles = ['./index.ts']; 
+const endpointsFiles = ['./index.js']; 
 
 swaggerAutogen(outputFile, endpointsFiles, doc);
