@@ -19,8 +19,9 @@ import { findResetTokenByUserId } from '../services/auth.service.js';
 import { deleteVerifyTokenByToken, getVerifyTokenByToken } from '../services/auth.service.js';
 import { verifyUser } from '../services/auth.service.js';
 import { createAdminRequest, deleteAdminRequestByUserId, deleteUserAndAdminRequests } from '../services/admin.service.js';
-import { getAdminTokenByToken, deleteAdminTokenByToken,  } from '../services/auth.service.js';
+import { getAdminTokenByToken, deleteAdminTokenByToken, } from '../services/auth.service.js';
 import { ActionType } from '../types/types.js';
+import validator from 'validator';
 //test vercel
 export const googleSignIn = async (req: Request<{ token: string }>, res: Response<ApiResponse<SignInResponse>>) => {
   try {
@@ -348,14 +349,16 @@ export const signup = async (req: Request<{}, {}, SignupRequest>, res: Response<
       });
       await deleteUserAndAdminRequests(existingEmail.id);
     }
-
+    if (!validator.isEmail(email)) {
+      return res.status(400).json({ success: false, message: 'Invalid email format.' });
+    }
     const existingUsername = await findUserByUsername(username);
     if (existingUsername) {
-      return res.status(500).json({ success: false, message: 'Username already exists.' });
+      return res.status(400).json({ success: false, message: 'Username already exists.' });
     }
 
     if (username.length > maxUsernameLength) {
-      return res.status(500).json({ success: false, message: `Username cannot exceed ${maxUsernameLength} characters.` });
+      return res.status(400).json({ success: false, message: `Username cannot exceed ${maxUsernameLength} characters.` });
     }
 
     const salt = crypto.randomBytes(16).toString('hex');

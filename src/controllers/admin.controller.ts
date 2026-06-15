@@ -9,13 +9,17 @@ import { findUserById, verifyUser, createUser } from '../services/auth.service.j
 import { findUserByEmail } from '../services/auth.service.js';
 import { attemptSend } from '../services/mail.service.js';
 import { getAdminRequests } from '../services/admin.service.js';
+import validator from 'validator';
 export const registerAdmin = async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
     if (!email) {
       return res.status(400).json({ success: false, message: 'Email is required.' });
     }
-
+    if (!validator.isEmail(email)) {
+      return res.status(400).json({ success: false, message: 'Invalid email format.' });
+    }
+    
     const existingUser = await findUserByEmail(email);
     if (existingUser) {
       return res.status(400).json({ success: false, message: 'Email already registered.' });
