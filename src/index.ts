@@ -26,7 +26,8 @@ import swaggerFile from './swagger-output.json' with { type: 'json' };
 const app = express();
 const port = process.env.PORT || 3001;
 const allowedOrigins = [
-  process.env.FRONTEND_DOMAIN
+  process.env.FRONTEND_DOMAIN,
+  process.env.DOMAIN,
 ];
 const swaggerOptions = {
   customCssUrl: 'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui.min.css',
