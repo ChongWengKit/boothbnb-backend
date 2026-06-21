@@ -1,6 +1,5 @@
 import cron from 'node-cron';
-import { updateCurrencyRate } from '../services/currency.service.js';
-
+import { currencyRepository } from '../repository/currency.repository.js';
 export async function runCurrencyUpdate() {
     try {
         const response = await fetch(`${process.env.CURRENCY_API}/v2/rates?base=USD`);
@@ -17,7 +16,7 @@ export async function runCurrencyUpdate() {
 
         if (Array.isArray(data)) {
             for (const entry of data) {
-                await updateCurrencyRate(entry.quote, entry.rate);
+                await currencyRepository.updateCurrencyRate(entry.quote, entry.rate);
             }
         }
     } catch (error) {

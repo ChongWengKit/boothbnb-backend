@@ -2,13 +2,11 @@ import { Request, Response } from 'express';
 import crypto from 'crypto';
 import { ApiResponse } from '../types/types.js';
 import { EmailLogCategory } from '@prisma/client';
-import { approveAdminRequestAndVerifyUser, createUserAndLogEmail, findAdminRequestById, updateAdminRequest } from '../services/admin.service.js';
 import { UpdateAdminRequestParams } from '../types/types.js';
 import { ActionType, AdminRequestStatus, Role } from '../types/types.js';
-import { findUserById, verifyUser, createUser } from '../services/auth.service.js';
-import { findUserByEmail } from '../services/auth.service.js';
 import { attemptSend } from '../services/mail.service.js';
-import { getAdminRequests } from '../services/admin.service.js';
+import { adminRepository } from '../repository/admin.repository.js';
+import { authRepository } from '../repository/auth.repository.js';
 import validator from 'validator';
 export const registerAdmin = async (req: Request, res: Response) => {
   try {
@@ -20,13 +18,13 @@ export const registerAdmin = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Invalid email format.' });
     }
     
-    const existingUser = await findUserByEmail(email);
+    const existingUser = await authRepository.findUserByEmail(email);
     if (existingUser) {
       return res.status(400).json({ success: false, message: 'Email already registered.' });
     }
 
     const username = email.split('@')[0] + Math.floor(Math.random() * 1000)
-    const { user, log } = await createUserAndLogEmail(
+    const { user, log } = await adminRepository.createUserAndLogEmail(
       {
         email,
         username,
@@ -51,18 +49,18 @@ export const updateAdminApproval = async (req: Request<UpdateAdminRequestParams>
     if (!id || !status) {
       return res.status(400).json({ success: false, message: 'Invalid parameters.' });
     }
-    const result = await findAdminRequestById(id);
+    const result = await adminRepository.findAdminRequestById(id);
     if (!result) {
       return res.status(404).json({ success: false, message: `Admin request with id ${id} does not exist` });
     }
     if (result.action_type === ActionType.HOST_APPROVAL) {
 
       if (status === AdminRequestStatus.APPROVED) {
-        const user = await findUserById(result.user_id);
+        const user = await authRepository.findUserById(result.user_id);
         if (!user) {
           return res.status(404).json({ success: false, message: `User with id ${result.user_id} does not exist` });
         }
-        const { log} = await approveAdminRequestAndVerifyUser(id, result.user_id, status, EmailLogCategory.HOST_APPROVED, {
+        const { log} = await adminRepository.approveAdminRequestAndVerifyUser(id, result.user_id, status, EmailLogCategory.HOST_APPROVED, {
           username: user.username,
           email: user.email,
         });
@@ -83,7 +81,7 @@ export const updateAdminApproval = async (req: Request<UpdateAdminRequestParams>
 export const getApprovalRequests = async (req: Request<{}>, res: Response<ApiResponse<any>>) => {
   try {
     const { page = 1, limit = 10, action_type, search, status } = req.query;
-    const requests = await getAdminRequests(Number(page), Number(limit), action_type as ActionType, search as string, status as AdminRequestStatus);
+    const requests = await adminRepository.getAdminRequests(Number(page), Number(limit), action_type as ActionType, search as string, status as AdminRequestStatus);
     return res.status(200).json({
       success: true,
       message: 'Approval requests retrieved successfully.',

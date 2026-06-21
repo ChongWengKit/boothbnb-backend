@@ -1,10 +1,9 @@
 import { Request, Response } from 'express';
 import { ApiResponse } from '../types/types.js';
 import { SearchEventResponse } from '../types/types.js';
-import { getEventsByIds } from '../services/event.service.js';
-import { findBookmarkIdkByUserId } from '../services/bookmark.service.js';
 import { BoothType } from '../types/types.js';
-import { createBookmark, deleteBookmark, findBookmarkByUserId } from '../services/bookmark.service.js';
+import { eventRepository } from '../repository/event.repository.js';
+import { bookmarkRepository } from '../repository/bookmark.repository.js';
 export const addFavorite = async (req: Request, res: Response<ApiResponse<{}>>) => {
   try {
     const { eventId } = req.body;
@@ -15,7 +14,7 @@ export const addFavorite = async (req: Request, res: Response<ApiResponse<{}>>) 
     if (!userId || !eventId) {
       return res.status(400).json({ success: false, message: 'Invalid Request.' });
     }
-    await createBookmark(parseInt(userId), parseInt(eventId));
+    await bookmarkRepository.createBookmark(parseInt(userId), parseInt(eventId));
 
     return res.status(201).json({
       success: true,
@@ -37,7 +36,7 @@ export const deleteFavorite = async (req: Request, res: Response<ApiResponse<{}>
     if (!userId || !eventId) {
       return res.status(400).json({ success: false, message: 'Invalid Request.' });
     }
-    await deleteBookmark(parseInt(userId), parseInt(eventId));
+    await bookmarkRepository.deleteBookmark(parseInt(userId), parseInt(eventId));
 
     return res.status(200).json({
       success: true,
@@ -57,7 +56,7 @@ export const getFavoriteBookmarkId = async (req: Request, res: Response<ApiRespo
     if (!userId) {
       return res.status(400).json({ success: false, message: 'Invalid Request.' });
     }
-    const bookmarks = await findBookmarkIdkByUserId(parseInt(userId));
+    const bookmarks = await bookmarkRepository.findBookmarkIdkByUserId(parseInt(userId));
     const bookmarkIds = bookmarks.map(b => b.event_id);
     return res.status(200).json({
       success: true,
@@ -81,7 +80,7 @@ export const getFavorite = async (req: Request, res: Response<ApiResponse<Search
     if (!userId) {
       return res.status(400).json({ success: false, message: 'Invalid Request.' });
     }
-    const { bookmarks, total } = await findBookmarkByUserId(parseInt(userId), page, limit);
+    const { bookmarks, total } = await bookmarkRepository.findBookmarkByUserId(parseInt(userId), page, limit);
 
     const formattedEvents = bookmarks.map((item) => {
       const event = item.event;

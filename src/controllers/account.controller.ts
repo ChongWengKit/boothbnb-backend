@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import { ApiResponse, EventStatus, Role } from '../types/types.js';
-import * as authService from '../services/auth.service.js';
-import * as eventService from '../services/event.service.js';
 import { BoothType } from '@prisma/client';
+import { authRepository } from '../repository/auth.repository.js';
+import { eventRepository } from '../repository/event.repository.js';
 export const getAccount = async (req: Request, res: Response<ApiResponse<any>>) => {
     try {
         const page = parseInt(req.query.page as string) || 1;
@@ -11,7 +11,7 @@ export const getAccount = async (req: Request, res: Response<ApiResponse<any>>) 
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
         const username = req.user.username;
-        const user = await authService.findUserByUsername(username);
+        const user = await authRepository.findUserByUsername(username);
 
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
@@ -21,7 +21,7 @@ export const getAccount = async (req: Request, res: Response<ApiResponse<any>>) 
         let meta;
 
         if (user.role === Role.HOST) {
-            const { events, total } = await eventService.getEventsByHostId(user.id, page, limit);
+            const { events, total } = await eventRepository.getEventsByHostId(user.id, page, limit);
             const totalPages = Math.ceil(total / limit);
 
             eventsData = events.map(event => {
@@ -79,7 +79,7 @@ export const getPublicAccount = async (req: Request, res: Response<ApiResponse<a
         if (!username) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
-        const user = await authService.findUserByUsername(username);
+        const user = await authRepository.findUserByUsername(username);
 
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
@@ -89,7 +89,7 @@ export const getPublicAccount = async (req: Request, res: Response<ApiResponse<a
         let meta;
 
         if (user.role === Role.HOST) {
-            const { events, total } = await eventService.getEventsByHostId(user.id, page, limit, EventStatus.PUBLISHED);
+            const { events, total } = await eventRepository.getEventsByHostId(user.id, page, limit, EventStatus.PUBLISHED);
             const totalPages = Math.ceil(total / limit);
 
             eventsData = events.map(event => {
@@ -150,7 +150,7 @@ export const updateProfilePhoto = async (req: Request, res: Response<ApiResponse
         }
 
         const userId = parseInt(req.user.id);
-        await authService.updateUserProfilePhoto(userId, profile_photo);
+        await authRepository.updateUserProfilePhoto(userId, profile_photo);
         return res.status(200).json({
             success: true,
             message: 'Profile photo updated successfully.',

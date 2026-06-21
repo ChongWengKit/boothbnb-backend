@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getCurrencyRate, getAllCurrencyService, getAllCurrencies, updateCurrencyStatus } from '../services/currency.service.js';
+import { currencyRepository } from '../repository/currency.repository.js';
 import { ApiResponse } from '../types/types.js';
 
 export const getCurrency = async (req: Request, res: Response<ApiResponse<any>>) => {
@@ -10,7 +10,7 @@ export const getCurrency = async (req: Request, res: Response<ApiResponse<any>>)
       return res.status(400).json({ success: false, message: 'currencyCode query parameter is required.' });
     }
 
-    const rate = await getCurrencyRate(currencyCode.toUpperCase());
+    const rate = await currencyRepository.getCurrencyRate(currencyCode.toUpperCase());
     if (!rate) {
       return res.status(400).json({ success: false, message: 'Currency rate not found.' });
     }
@@ -27,7 +27,7 @@ export const getAllCurrencyDetails = async (req: Request, res: Response<ApiRespo
     const limit = parseInt(req.query.limit as string) || 10;
     const search = req.query.search as string | undefined;
     const status = req.query.status === 'true' ? true : req.query.status === 'false' ? false : undefined;
-    const { data, meta } = await getAllCurrencies(page, limit, search, status);
+    const { data, meta } = await currencyRepository.getAllCurrencies(page, limit, search, status);
     return res.status(200).json({ 
       success: true, 
       message: 'Currency details retrieved successfully.', 
@@ -47,7 +47,7 @@ export const updateStatus = async (req: Request, res: Response<ApiResponse<any>>
       return res.status(400).json({ success: false, message: 'Currency and is_enabled status are required.' });
     }
 
-    const updated = await updateCurrencyStatus(currency.toUpperCase(), is_enabled);
+    const updated = await currencyRepository.updateCurrencyStatus(currency.toUpperCase(), is_enabled);
     return res.status(200).json({ 
       success: true, 
       message: `Currency ${currency} status updated to ${is_enabled ? 'enabled' : 'disabled'}.`, 
@@ -60,7 +60,7 @@ export const updateStatus = async (req: Request, res: Response<ApiResponse<any>>
 
 export const getAllCurrency = async (req: Request, res: Response<ApiResponse<any>>) => {
   try {
-    const currencies = await getAllCurrencyService();
+    const currencies = await currencyRepository.getAllCurrencyService();
     const currencyList = currencies.map(c => c.currency);
     return res.status(200).json({ success: true, message: 'Currencies retrieved successfully.', data: currencyList });
   } catch (error) {

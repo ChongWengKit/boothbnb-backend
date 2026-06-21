@@ -1,11 +1,9 @@
 import cron from 'node-cron';
 import Stripe from 'stripe';
-import * as eventService from '../services/event.service.js';
 import { PaymentStatus } from '@prisma/client';
 import { BoothType } from '../types/types.js';
 import { attemptSend } from '../services/mail.service.js';
-import { confirmBoothBookingWithStatusUpdate } from '../services/event.service.js';
-
+import { eventRepository} from '../repository/event.repository.js';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: '2026-03-25.dahlia',
 });
@@ -13,12 +11,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
 export async function runBookingCleanup() {
 
     try {
-        const pendingBookings = await eventService.getPendingBookingsWithSessions();
+        const pendingBookings = await eventRepository.getPendingBookingsWithSessions();
 
         for (const booking of pendingBookings) {
             const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
             if (!booking.session_id && booking.booked_at < oneHourAgo) {
-                await confirmBoothBookingWithStatusUpdate(booking.id, booking.booth_id, PaymentStatus.FAILED, BoothType.AVAILABLE);
+                await eventRepository.confirmBoothBookingWithStatusUpdate(booking.id, booking.booth_id, PaymentStatus.FAILED, BoothType.AVAILABLE);
                 continue;
             }
             if (!booking.session_id) continue;
@@ -30,7 +28,7 @@ export async function runBookingCleanup() {
                     const paymentIntent = session.payment_intent as Stripe.PaymentIntent;
                     const charge = paymentIntent?.latest_charge as Stripe.Charge;
                     
-                    const result = await eventService.finalizeBoothBooking(booking.id, booking.booth_id, {
+                    const result = await eventRepository.finalizeBoothBooking(booking.id, booking.booth_id, {
                         cardBrand: charge?.payment_method_details?.card?.brand ?? '',
                         cardLast4: charge?.payment_method_details?.card?.last4 ?? '',
                         stripeChargeId: charge?.id,
@@ -47,7 +45,7 @@ export async function runBookingCleanup() {
                 }
 
                 if (session.status === 'expired') {
-                     await confirmBoothBookingWithStatusUpdate(booking.id, booking.booth_id, PaymentStatus.FAILED, BoothType.AVAILABLE);
+                     await eventRepository.confirmBoothBookingWithStatusUpdate(booking.id, booking.booth_id, PaymentStatus.FAILED, BoothType.AVAILABLE);
                 }
 
             } catch (err) {

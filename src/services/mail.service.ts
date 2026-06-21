@@ -9,7 +9,8 @@ import pkg, { EmailLogCategory, EmailLogStatus } from '@prisma/client';
 import { prisma } from '../lib/db.js';
 import { JSX } from 'react';
 import crypto from 'crypto';
-import { createAdminToken, deleteAdminTokensByEmail } from './auth.service.js';
+import {mailRepository}  from '../repository/mail.repository.js';
+import { authRepository } from '../repository/auth.repository.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -70,8 +71,8 @@ export const attemptSend = async (logId: number) => {
         const rawToken = crypto.randomBytes(32).toString('hex');
         const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
 
-        await deleteAdminTokensByEmail(payload.email);
-        await createAdminToken(payload.email, hashedToken, new Date(Date.now() + 1000 * 60 * 60 * 24));
+        await authRepository.deleteAdminTokensByEmail(payload.email);
+        await authRepository.createAdminToken(payload.email, hashedToken, new Date(Date.now() + 1000 * 60 * 60 * 24));
 
         emailOptions = {
           to: [payload.email],
@@ -137,26 +138,6 @@ export const attemptSend = async (logId: number) => {
   }
 };
 
-export const logEmail = async (user_id: number, category: EmailLogCategory, payload: Record<string, any>, status: EmailLogStatus = EmailLogStatus.PENDING, email_id?: string ) => {
-
-  return prisma.email_logs.create({
-    data: {
-      user_id,
-      category,
-      payload,
-      status,
-      email_id: email_id ?? null,
-    },
-  });
-}
-
-export const updateEmailLogStatus = async (emailId: string, newStatus: EmailLogStatus) => {
-  await prisma.email_logs.updateMany({
-    where: { email_id: emailId },
-    data: { status: newStatus }
-  });
-}
-
 export const syncEmailStatus = async (emailId: string) => {
   try {
     const { data, error } = await resend.emails.get(emailId);
@@ -173,72 +154,9 @@ export const syncEmailStatus = async (emailId: string) => {
     }
 
     if (newStatus) {
-      await updateEmailLogStatus(emailId, newStatus);
+      await mailRepository.updateEmailLogStatus(emailId, newStatus);
     }
   } catch (e: any) {
   }
 };
 
-export const getEmailLogById = async (id: number) => {
-  return prisma.email_logs.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      user_id: true,
-      category: true,
-      payload: true,
-      status: true,
-      email_id: true,
-      attempts: true
-    },
-  });
-};
-
-export const getAllEmailLogs = async (page: number, limit: number, status?: EmailLogStatus, category?: EmailLogCategory, search?: string) => {
-  const where = {
-    ...(status && { status }),
-    ...(category && { category }),
-    ...(search && {
-      OR: [
-        { payload: { path: ['name'], string_contains: search } },
-        { payload: { path: ['email'], string_contains: search } }
-      ]
-    }),
-  };
-
-  const [result, totalItems] = await Promise.all([
-    prisma.email_logs.findMany({
-      where,
-      orderBy: {
-        id: 'desc'
-      },
-      skip: (page - 1) * limit,
-      take: limit,
-      select: {
-        id: true,
-        user_id: true,
-        category: true,
-        payload: true,
-        status: true,
-        email_id: true,
-        attempts: true,
-      }
-    }),
-    prisma.email_logs.count({ where })
-  ]);
-
-  const totalPages = Math.ceil(totalItems / limit);
-  const currentPage = page;
-  const itemsPerPage = limit;
-  return {
-    data: result,
-    meta: {
-      totalItems,
-      totalPages,
-      currentPage,
-      itemsPerPage,
-      hasNextPage: currentPage < totalPages,
-      hasPreviousPage: currentPage > 1,
-    }
-  };
-};

@@ -1,5 +1,5 @@
-import {deleteVerifyTokenByToken, getVerifyTokenByToken} from '../services/auth.service.js';
-import { verifyUser } from '../services/auth.service.js';
+
+import { authRepository } from '../repository/auth.repository.js';
 import { ApiResponse } from '../types/types.js';
 import type { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
@@ -18,7 +18,7 @@ export const verify = async (req: Request, res: Response<ApiResponse<{ authentic
     }
 
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-    const verifyToken = await getVerifyTokenByToken(hashedToken);
+    const verifyToken = await authRepository.getVerifyTokenByToken(hashedToken);
     if (!verifyToken) {
       return res.status(404).json({ success: false, message: 'Token not found.' });
     }
@@ -26,13 +26,13 @@ export const verify = async (req: Request, res: Response<ApiResponse<{ authentic
     if (new Date(verifyToken.expires_in) < new Date()) {
       return res.status(401).json({ success: false, message: 'Token has expired.' });
     }
-    const user = await verifyUser(verifyToken.user_id);
+    const user = await authRepository.verifyUser(verifyToken.user_id);
     
     const authenticationToken = jwt.sign({ id: user.id, username: user.username, email: user.email, role: user.role }, secret, {
           expiresIn: '30d',
         });
 
-    await deleteVerifyTokenByToken(hashedToken);  
+    await authRepository.deleteVerifyTokenByToken(hashedToken);  
     
     return res.status(200).json({ success: true, message: 'Email verified successfully.', data: { authentication_token: authenticationToken } });
   } catch (error) {

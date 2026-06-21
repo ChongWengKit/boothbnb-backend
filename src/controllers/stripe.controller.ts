@@ -1,10 +1,8 @@
 import { Request, Response } from 'express';
 import Stripe from 'stripe';
 import { prisma } from '../lib/db.js';
-import { updateUserStripeStatus } from '../services/auth.service.js';
-import * as eventService from '../services/event.service.js';
-import * as emailService from '../services/mail.service.js';
-import * as authServices from '../services/auth.service.js';
+import {eventRepository} from '../repository/event.repository.js';
+import {authRepository} from '../repository/auth.repository.js';
 import { BoothType } from '../types/types.js';
 import { PaymentStatus } from '@prisma/client';
 import { attemptSend } from '../services/mail.service.js';
@@ -83,7 +81,7 @@ export const checkStripeStatus = async (req: Request, res: Response) => {
                 payoutsEnabled = false;
                 user.stripe_account_id = null;
             } else if (account.payouts_enabled && !payoutsEnabled) {
-                await updateUserStripeStatus(userId, true);
+                await authRepository.updateUserStripeStatus(userId, true);
                 payoutsEnabled = true;
             }
         }
@@ -117,7 +115,7 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
                 const bookingId = parseInt(metadata.bookingId);
                 const boothId = parseInt(metadata.boothId);
 
-                const booking = await eventService.getBookingById(bookingId);
+                const booking = await eventRepository.getBookingById(bookingId);
                 if (booking?.payment_status === PaymentStatus.PAID) {
                     return res.status(200).json({ received: true });
                 }
@@ -129,7 +127,7 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
                 const paymentIntent = sessionWithDetails.payment_intent as Stripe.PaymentIntent;
                 const charge = paymentIntent?.latest_charge as Stripe.Charge;
                 
-                const result = await eventService.finalizeBoothBooking(bookingId, boothId, {
+                const result = await eventRepository.finalizeBoothBooking(bookingId, boothId, {
                     cardBrand: charge?.payment_method_details?.card?.brand ?? '',
                     cardLast4: charge?.payment_method_details?.card?.last4 ?? '',
                     stripeChargeId: charge?.id,
@@ -153,13 +151,13 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
                 const bookingId = parseInt(metadata.bookingId);
                 const boothId = parseInt(metadata.boothId);
 
-                const booking = await eventService.getBookingById(bookingId);
+                const booking = await eventRepository.getBookingById(bookingId);
                 if (booking?.payment_status === PaymentStatus.FAILED) {
                     return res.status(200).json({ received: true });
                 }
 
-                await eventService.confirmBoothBooking(bookingId, PaymentStatus.FAILED);
-                await eventService.confirmUpdateBoothStatus(boothId, BoothType.AVAILABLE);
+                await eventRepository.confirmBoothBooking(bookingId, PaymentStatus.FAILED);
+                await eventRepository.confirmUpdateBoothStatus(boothId, BoothType.AVAILABLE);
 
             }
         }
@@ -170,9 +168,9 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
                 : capability.account.id;
             if (capability.id === 'transfers') {
                 if ((capability.status as string) === 'disabled') {
-                    await authServices.disableUserStripePayoutStatus(accountId);
+                    await authRepository.disableUserStripePayoutStatus(accountId);
                 } else if ((capability.status as string) === 'active') {
-                    await authServices.enableUserStripePayoutStatus(accountId);
+                    await authRepository.enableUserStripePayoutStatus(accountId);
                 }
             }
         }

@@ -1,18 +1,16 @@
 import { ApiResponse, BoothType, CreateEventRequest, EventStatus, SearchEventRequest, SearchEventResponse, UpdateEventRequest } from '../types/types.js';
-import * as eventService from '../services/event.service.js';
 import type { Request, Response } from 'express';
 import { Role } from '../types/types.js';
 import { EventParamsResponse } from '../types/types.js';
 import Stripe from 'stripe';
 import jwt from 'jsonwebtoken';
-import * as bookmarkService from '../services/bookmark.service.js';
 import { PaymentStatus, EmailLogCategory, EmailLogStatus } from '@prisma/client';
-import { findUserById } from '../services/auth.service.js';
+import { authRepository } from '../repository/auth.repository.js';
+import { currencyRepository } from '../repository/currency.repository.js';
+import { eventRepository } from '../repository/event.repository.js';
+import { bookmarkRepository } from '../repository/bookmark.repository.js';
 import * as emailService from '../services/mail.service.js';
 import { User } from '../types/types.js'
-import { getCurrencyRate } from '../services/currency.service.js';
-import { getCurrency } from '../services/currency.service.js';
-import { confirmBoothBookingWithStatusUpdate } from '../services/event.service.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: '2026-03-25.dahlia',
@@ -37,7 +35,7 @@ export const searchEvents = async (req: Request, res: Response<ApiResponse<Searc
             page: typeof page === 'string' ? parseInt(page) : 1,
             limit: typeof limit === 'string' ? parseInt(limit) : 12,
         };
-        const { events, total } = await eventService.getEventsBySearchRequest(searchRequest);
+        const { events, total } = await eventRepository.getEventsBySearchRequest(searchRequest);
         const totalPages = Math.ceil(total / searchRequest.limit!);
 
         const formattedEvents = events.map(event => {
@@ -90,7 +88,7 @@ export const createEvent = async (req: Request<{}, {}, CreateEventRequest>, res:
             return res.status(403).json({ success: false, message: 'Forbidden. Only hosts can create events.' });
         }
 
-        const host = await findUserById(parseInt(hostId));
+        const host = await authRepository.findUserById(parseInt(hostId));
         if (!host?.stripe_account_id || host?.stripe_payout_enabled === false) {
             return res.status(400).json({
                 success: false,
@@ -103,7 +101,7 @@ export const createEvent = async (req: Request<{}, {}, CreateEventRequest>, res:
         if (!currencyCode) {
             return res.status(400).json({ success: false, message: 'Currency header is required.' });
         }
-        const rate = await getCurrencyRate(currencyCode.toUpperCase());
+        const rate = await currencyRepository.getCurrencyRate(currencyCode.toUpperCase());
         if (!rate) {
             return res.status(400).json({ success: false, message: `Currency ${currencyCode} is not supported.` });
         }
@@ -131,7 +129,7 @@ export const createEvent = async (req: Request<{}, {}, CreateEventRequest>, res:
             return res.status(400).json({ success: false, message: 'Missing or invalid event fields.' });
         }
 
-        const newEvent = await eventService.createEvent(parseInt(hostId), eventData);
+        const newEvent = await eventRepository.createEvent(parseInt(hostId), eventData);
         return res.status(201).json({
             success: true,
             message: 'Event created successfully.',
@@ -156,7 +154,7 @@ export const updateEvent = async (req: Request<{ slug: string }, {}, UpdateEvent
             return res.status(403).json({ success: false, message: 'Forbidden. Only hosts can update events.' });
         }
 
-        const event = await eventService.getEventBySlug(slug, [EventStatus.DRAFT]);
+        const event = await eventRepository.getEventBySlug(slug, [EventStatus.DRAFT]);
         if (!event) {
             return res.status(404).json({ success: false, message: 'Event not found' });
         }
@@ -164,7 +162,7 @@ export const updateEvent = async (req: Request<{ slug: string }, {}, UpdateEvent
         if (!currencyCode) {
             return res.status(400).json({ success: false, message: 'Currency header is required.' });
         }
-        const rate = await getCurrencyRate(currencyCode.toUpperCase());
+        const rate = await currencyRepository.getCurrencyRate(currencyCode.toUpperCase());
         if (!rate) {
             return res.status(400).json({ success: false, message: `Currency ${currencyCode} is not supported.` });
         }
@@ -193,7 +191,7 @@ export const updateEvent = async (req: Request<{ slug: string }, {}, UpdateEvent
         ) {
             return res.status(400).json({ success: false, message: 'Missing or invalid event fields.' });
         }
-        await eventService.updateEvent(event.id, updateData);
+        await eventRepository.updateEvent(event.id, updateData);
 
         return res.status(200).json({ success: true, message: 'Event updated successfully' });
     } catch (error) {
@@ -209,7 +207,7 @@ export const publishEvent = async (req: Request<{ slug: string }>, res: Response
         }
         const hostId = parseInt(req.user.id);
 
-        const event = await eventService.getEventBySlug(slug, [EventStatus.DRAFT, EventStatus.CLOSED]);
+        const event = await eventRepository.getEventBySlug(slug, [EventStatus.DRAFT, EventStatus.CLOSED]);
         if (!event) {
             return res.status(404).json({ success: false, message: 'Event not found' });
         }
@@ -218,7 +216,7 @@ export const publishEvent = async (req: Request<{ slug: string }>, res: Response
             return res.status(403).json({ success: false, message: 'Forbidden. You do not own this event.' });
         }
 
-        const host = await findUserById(hostId);
+        const host = await authRepository.findUserById(hostId);
         if (!host?.stripe_account_id || host?.stripe_payout_enabled === false) {
             return res.status(400).json({
                 success: false,
@@ -226,7 +224,7 @@ export const publishEvent = async (req: Request<{ slug: string }>, res: Response
             });
         }
 
-        await eventService.updateEventStatus(event.id, EventStatus.PUBLISHED);
+        await eventRepository.updateEventStatus(event.id, EventStatus.PUBLISHED);
 
         return res.status(200).json({ success: true, message: 'Event published successfully' });
     } catch (error) {
@@ -242,7 +240,7 @@ export const closeEvent = async (req: Request<{ slug: string }>, res: Response<A
         }
         const hostId = parseInt(req.user.id);
 
-        const event = await eventService.getEventBySlug(slug);
+        const event = await eventRepository.getEventBySlug(slug);
         if (!event) {
             return res.status(404).json({ success: false, message: 'Event not found' });
         }
@@ -251,7 +249,7 @@ export const closeEvent = async (req: Request<{ slug: string }>, res: Response<A
             return res.status(403).json({ success: false, message: 'Forbidden. You do not own this event.' });
         }
 
-        await eventService.updateEventStatus(event.id, EventStatus.CLOSED);
+        await eventRepository.updateEventStatus(event.id, EventStatus.CLOSED);
 
         return res.status(200).json({ success: true, message: 'Event Closed successfully' });
     } catch (error) {
@@ -276,7 +274,7 @@ export const findEventsByHostId = async (req: Request, res: Response<ApiResponse
             return res.status(403).json({ success: false, message: 'Forbidden. Only hosts can access this resource.' });
         }
 
-        const { events, total } = await eventService.getEventsByHostId(parseInt(user_id), page, limit, status, search);
+        const { events, total } = await eventRepository.getEventsByHostId(parseInt(user_id), page, limit, status, search);
         const totalPages = Math.ceil(total / limit);
         const formattedEvents = events.map(event => {
             const locked_count = event.booths.filter(b => b.type === BoothType.LOCKED).length;
@@ -330,7 +328,7 @@ export const getEventBySlug = async (
                 message: 'Event not found'
             });
         }
-        const event = await eventService.getEventBySlug(slug as string, [EventStatus.PUBLISHED, EventStatus.CLOSED, EventStatus.CANCELLED]);
+        const event = await eventRepository.getEventBySlug(slug as string, [EventStatus.PUBLISHED, EventStatus.CLOSED, EventStatus.CANCELLED]);
 
         if (!event) {
             return res.status(404).json({
@@ -368,7 +366,7 @@ export const getEventBySlug = async (
         const bookmarks_count = (event as any)._count?.bookmarks ?? 0;
         let is_bookmarked = false;
         if (userId) {
-            is_bookmarked = await bookmarkService.isBookmarked(userId, event.id);
+            is_bookmarked = await bookmarkRepository.isBookmarked(userId, event.id);
         }
 
         const currencyCode = req.headers['currency'] as string;
@@ -376,13 +374,13 @@ export const getEventBySlug = async (
         let baseRate = 1;
 
         if (currencyCode) {
-            const targetCurrency = await getCurrencyRate(currencyCode.toUpperCase());
+            const targetCurrency = await currencyRepository.getCurrencyRate(currencyCode.toUpperCase());
             if (!targetCurrency) {
                 return res.status(400).json({ success: false, message: `Currency ${currencyCode} not supported.` });
             }
             targetRate = Number(targetCurrency.rate);
 
-            const eventCurrency = await getCurrency(event.currency_code.toUpperCase());
+            const eventCurrency = await currencyRepository.getCurrencyRate(event.currency_code.toUpperCase());
             if (eventCurrency) {
                 baseRate = Number(eventCurrency.rate);
             }
@@ -432,7 +430,7 @@ export const getEventDetailsBySlug = async (
 
             return res.status(404).json({ success: false, message: 'Forbidden. Only the host can view event details.' });
         }
-        const event = await eventService.getEventDetailsBySlug(slug as string);
+        const event = await eventRepository.getEventDetailsBySlug(slug as string);
 
         if (!event) {
             return res.status(404).json({
@@ -452,14 +450,14 @@ export const getEventDetailsBySlug = async (
         let targetRate = 1;
         let baseRate = 1;
         if (currencyCode) {
-            const targetCurrency = await getCurrencyRate(currencyCode.toUpperCase());
+            const targetCurrency = await currencyRepository.getCurrencyRate(currencyCode.toUpperCase());
             if (!targetCurrency) {
 
                 return res.status(400).json({ success: false, message: `Currency ${currencyCode} not supported.` });
             }
             targetRate = Number(targetCurrency.rate);
 
-            const eventCurrency = await getCurrency(event.currency_code.toUpperCase());
+            const eventCurrency = await currencyRepository.getCurrencyRate(event.currency_code.toUpperCase());
             if (eventCurrency) {
                 baseRate = Number(eventCurrency.rate);
             }
@@ -508,7 +506,7 @@ export const getEventEditBySlug = async (
 
             return res.status(404).json({ success: false, message: 'Forbidden. Only the host can view event details.' });
         }
-        const event = await eventService.getEventDetailsBySlug(slug as string);
+        const event = await eventRepository.getEventDetailsBySlug(slug as string);
 
         if (!event) {
             return res.status(404).json({
@@ -528,14 +526,14 @@ export const getEventEditBySlug = async (
         let targetRate = 1;
         let baseRate = 1;
         if (currencyCode) {
-            const targetCurrency = await getCurrencyRate(currencyCode.toUpperCase());
+            const targetCurrency = await currencyRepository.getCurrencyRate(currencyCode.toUpperCase());
             if (!targetCurrency) {
 
                 return res.status(400).json({ success: false, message: `Currency ${currencyCode} not supported.` });
             }
             targetRate = Number(targetCurrency.rate);
 
-            const eventCurrency = await getCurrency(event.currency_code.toUpperCase());
+            const eventCurrency = await currencyRepository.getCurrencyRate(event.currency_code.toUpperCase());
             if (eventCurrency) {
                 baseRate = Number(eventCurrency.rate);
             }
@@ -583,7 +581,7 @@ export const checkoutByUpdateEventReserved = async (
         const vendorId = parseInt(req.user.id);
 
 
-        const event = await eventService.getEventById(parseInt(eventId));
+        const event = await eventRepository.getEventById(parseInt(eventId));
         if (!event) {
             return res.status(404).json({ success: false, message: 'Event not found' });
         }
@@ -591,17 +589,17 @@ export const checkoutByUpdateEventReserved = async (
         let targetRate = 1;
         let baseRate = 1;
 
-        const targetCurrency = await getCurrencyRate(currencyCode);
+        const targetCurrency = await currencyRepository.getCurrencyRate(currencyCode);
         if (!targetCurrency) {
             return res.status(400).json({ success: false, message: `Currency ${currencyCode} not supported.` });
         }
         targetRate = Number(targetCurrency.rate);
 
-        const eventCurrency = await getCurrency(event.currency_code.toUpperCase());
+        const eventCurrency = await currencyRepository.getCurrencyRate(event.currency_code.toUpperCase());
         if (eventCurrency) {
             baseRate = Number(eventCurrency.rate);
         }
-        const host = await findUserById(event.host_id);
+        const host = await authRepository.findUserById(event.host_id);
         if (!host || !host.stripe_account_id || host.stripe_payout_enabled === false) {
             return res.status(400).json({
                 success: false,
@@ -629,7 +627,7 @@ export const checkoutByUpdateEventReserved = async (
         const unitAmount = isZeroDecimal
             ? Math.round(calculatedPrice)
             : Math.round(calculatedPrice * 100);
-        const [bookingRecord, boothResult] = await eventService.createBoothBooking(vendorId, currencyCode, parseInt(boothId), booth.name, event.title, Number(calculatedPrice));
+        const [bookingRecord, boothResult] = await eventRepository.createBoothBooking(vendorId, currencyCode, parseInt(boothId), booth.name, event.title, Number(calculatedPrice));
         const bookingId = bookingRecord.id;
         const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [{
             price_data: {
@@ -676,10 +674,10 @@ export const checkoutByUpdateEventReserved = async (
                     eventCurrency: event.currency_code
                 }
             });
-            await eventService.updateBoothBooking(bookingId, session.id);
+            await eventRepository.updateBoothBooking(bookingId, session.id);
         }
         catch (error) {
-            await confirmBoothBookingWithStatusUpdate(bookingId, boothId, PaymentStatus.FAILED, BoothType.AVAILABLE);
+            await eventRepository.confirmBoothBookingWithStatusUpdate(bookingId, boothId, PaymentStatus.FAILED, BoothType.AVAILABLE);
             return res.status(500).json({ success: false, message: 'Failed to create Stripe checkout session' });
         }
 

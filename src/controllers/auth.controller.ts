@@ -1,27 +1,20 @@
 import { Request, Response } from 'express';
 import { v2 as cloudinary } from 'cloudinary';
 import { ApiResponse } from '../types/types.js';
-import { findUserByEmail, createUser, resetUserPasswordAndRemoveToken, finalizeUserRegistrationAndRemoveToken } from '../services/auth.service.js';
 import jwt from 'jsonwebtoken';
 import { Role } from '../types/types.js';
 import { SignInResponse } from '../types/types.js';
 import crypto from 'crypto';
 import { prisma } from '../lib/db.js';
 import { Prisma, EmailLogCategory, EmailLogStatus } from '@prisma/client';
-import { logEmail, attemptSend } from '../services/mail.service.js';
-import { deleteUser } from '../services/auth.service.js';
-import { findUserById, updateUserPassword } from '../services/auth.service.js';
-import { getResetTokenByToken, deleteResetTokenByToken } from '../services/auth.service.js';
-import { findUserByUsername } from '../services/auth.service.js';
+import { attemptSend } from '../services/mail.service.js';
 import { SignupData, SignupRequest } from '../types/types.js';
 import { SignInRequest } from '../types/types.js';
-import { findResetTokenByUserId } from '../services/auth.service.js';
-import { deleteVerifyTokenByToken, getVerifyTokenByToken } from '../services/auth.service.js';
-import { verifyUser } from '../services/auth.service.js';
-import { createAdminRequest, deleteAdminRequestByUserId, deleteUserAndAdminRequests } from '../services/admin.service.js';
-import { getAdminTokenByToken, deleteAdminTokenByToken, } from '../services/auth.service.js';
 import { ActionType } from '../types/types.js';
 import validator from 'validator';
+import { authRepository } from '../repository/auth.repository.js';
+import { adminRepository } from '../repository/admin.repository.js';
+import { mailRepository } from '../repository/mail.repository.js';
 //test vercel
 export const googleSignIn = async (req: Request<{ token: string }>, res: Response<ApiResponse<SignInResponse>>) => {
   try {
@@ -43,7 +36,7 @@ export const googleSignIn = async (req: Request<{ token: string }>, res: Respons
     }
     const email = data.email;
 
-    let user = await findUserByEmail(email);
+    let user = await authRepository.findUserByEmail(email);
     if (!user) {
       return res.status(404).json({ success: false, message: 'User does not exist. Please sign up first.' });
     }
@@ -106,7 +99,7 @@ export const googleSignUp = async (req: Request<{ token: string, role: Role }>, 
     const email = data.email;
     const name = data.name + Math.floor(Math.random() * 10000);
     const photo = data.picture;
-    let user = await findUserByEmail(email);
+    let user = await authRepository.findUserByEmail(email);
     const allowedRoles = [Role.HOST, Role.VENDOR];
 
     if (!allowedRoles.includes(role)) {
@@ -133,7 +126,7 @@ export const googleSignUp = async (req: Request<{ token: string, role: Role }>, 
         } catch (uploadError) {
         }
       }
-      ({ user } = await createUser({
+      ({ user } = await authRepository.createUser({
         email,
         username: name,
         role: role,
@@ -196,7 +189,7 @@ export const resetPassword = async (req: Request<{ password: string, token: stri
     }
 
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-    const resetToken = await getResetTokenByToken(hashedToken);
+    const resetToken = await authRepository.getResetTokenByToken(hashedToken);
     if (!resetToken) {
       return res.status(404).json({ success: false, message: 'Token not found.' });
     }
@@ -205,7 +198,7 @@ export const resetPassword = async (req: Request<{ password: string, token: stri
       return res.status(401).json({ success: false, message: 'Token has expired.' });
     }
 
-    const user = await findUserById(resetToken.user_id);
+    const user = await authRepository.findUserById(resetToken.user_id);
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
@@ -213,7 +206,7 @@ export const resetPassword = async (req: Request<{ password: string, token: stri
     const salt = crypto.randomBytes(16).toString('hex');
     const hashedPassword = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
 
-    await resetUserPasswordAndRemoveToken(resetToken.user_id, hashedPassword, salt, hashedToken);
+    await authRepository.resetUserPasswordAndRemoveToken(resetToken.user_id, hashedPassword, salt, hashedToken);
 
     return res.status(200).json({
       success: true,
@@ -234,25 +227,25 @@ export const adminSignup = async (req: Request, res: Response) => {
 
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 
-    const adminToken = await getAdminTokenByToken(hashedToken);
+    const adminToken = await authRepository.getAdminTokenByToken(hashedToken);
 
     if (!adminToken || new Date(adminToken.expires_in) < new Date()) {
       return res.status(400).json({ success: false, message: 'Invalid or expired invitation token.' });
     }
 
-    const user = await findUserByEmail(adminToken.email);
+    const user = await authRepository.findUserByEmail(adminToken.email);
     if (!user) {
       return res.status(404).json({ success: false, message: 'Invited user record not found.' });
     }
 
-    const existingUsername = await findUserByUsername(username);
+    const existingUsername = await authRepository.findUserByUsername(username);
     if (existingUsername) {
       return res.status(400).json({ success: false, message: 'Username is already taken.' });
     }
 
     const salt = crypto.randomBytes(16).toString('hex');
     const hashedPassword = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
-    await finalizeUserRegistrationAndRemoveToken(user.id, {
+    await authRepository.finalizeUserRegistrationAndRemoveToken(user.id, {
       username,
       password: hashedPassword,
       salt,
@@ -277,7 +270,7 @@ export const signin = async (req: Request<{}, {}, SignInRequest>, res: Response<
       return res.status(400).json({ success: false, message: 'Email and password are required.' });
     }
 
-    const user = await findUserByEmail(email);
+    const user = await authRepository.findUserByEmail(email);
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
@@ -333,7 +326,7 @@ export const signup = async (req: Request<{}, {}, SignupRequest>, res: Response<
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({ success: false, message: 'Invalid role.' });
     }
-    const existingEmail = await findUserByEmail(email);
+    const existingEmail = await authRepository.findUserByEmail(email);
     if (existingEmail && existingEmail.is_verified) {
       return res.status(500).json({ success: false, message: 'Email already exist.' });
     }
@@ -347,12 +340,12 @@ export const signup = async (req: Request<{}, {}, SignupRequest>, res: Response<
           user_id: existingEmail.id,
         },
       });
-      await deleteUserAndAdminRequests(existingEmail.id);
+      await adminRepository.deleteUserAndAdminRequests(existingEmail.id);
     }
     if (!validator.isEmail(email)) {
       return res.status(400).json({ success: false, message: 'Invalid email format.' });
     }
-    const existingUsername = await findUserByUsername(username);
+    const existingUsername = await authRepository.findUserByUsername(username);
     if (existingUsername) {
       return res.status(400).json({ success: false, message: 'Username already exists.' });
     }
@@ -364,7 +357,7 @@ export const signup = async (req: Request<{}, {}, SignupRequest>, res: Response<
     const salt = crypto.randomBytes(16).toString('hex');
     const hashedPassword = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
 
-    const { user, log } = await createUser({
+    const { user, log } = await authRepository.createUser({
       email,
       username,
       password: hashedPassword,
@@ -411,12 +404,12 @@ export const forgotPassword = async (req: Request<{ email: string }>, res: Respo
       return res.status(400).json({ success: false, message: 'Email is required.' });
     }
 
-    const user = await findUserByEmail(email);
+    const user = await authRepository.findUserByEmail(email);
     if (!user) {
       return res.status(404).json({ success: false, message: 'User with email does not exist.' });
     }
-    const log = await logEmail(user.id, EmailLogCategory.PASSWORD_RESET, { email, name: user.username });
-    attemptSend(log.id);
+    const log = await mailRepository.logEmail(user.id, EmailLogCategory.PASSWORD_RESET, { email, name: user.username });
+    await attemptSend(log.id);
     return res.status(200).json({ success: true, message: 'Reset password email sent successfully.' });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -436,7 +429,7 @@ export const verify = async (req: Request, res: Response<ApiResponse<{ authentic
     }
 
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-    const verifyToken = await getVerifyTokenByToken(hashedToken);
+    const verifyToken = await authRepository.getVerifyTokenByToken(hashedToken);
     if (!verifyToken) {
       return res.status(404).json({ success: false, message: 'Token not found.' });
     }
@@ -444,13 +437,13 @@ export const verify = async (req: Request, res: Response<ApiResponse<{ authentic
     if (new Date(verifyToken.expires_in) < new Date()) {
       return res.status(401).json({ success: false, message: 'Token has expired.' });
     }
-    const user = await verifyUser(verifyToken.user_id);
+    const user = await authRepository.verifyUser(verifyToken.user_id);
 
     const authenticationToken = jwt.sign({ id: user.id, username: user.username, email: user.email, role: user.role }, secret, {
       expiresIn: '30d',
     });
 
-    await deleteVerifyTokenByToken(hashedToken);
+    await authRepository.deleteVerifyTokenByToken(hashedToken);
 
     return res.status(200).json({ success: true, message: 'Email verified successfully.', data: { authentication_token: authenticationToken, profile_photo: user.profile_photo } });
   } catch (error) {

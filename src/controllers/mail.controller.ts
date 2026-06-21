@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { EmailLogCategory, EmailLogStatus } from '@prisma/client';
-import { updateEmailLogStatus } from '../services/mail.service.js';
-import { getEmailLogById, attemptSend, getAllEmailLogs } from '../services/mail.service.js';
+import { mailRepository } from '../repository/mail.repository.js';
+import { attemptSend } from '../services/mail.service.js';
 export const handleResendWebhook = async (req: Request, res: Response) => {
     try {
         const { type, data } = req.body;
@@ -22,7 +22,7 @@ export const handleResendWebhook = async (req: Request, res: Response) => {
         }
 
         if (newStatus) {
-            await updateEmailLogStatus(emailId, newStatus);
+            await mailRepository.updateEmailLogStatus(emailId, newStatus);
         }
 
         return res.status(200).json({ received: true });
@@ -38,7 +38,7 @@ export const getEmailLogs = async (req: Request, res: Response) => {
         const status = req.query.status as EmailLogStatus | undefined;
         const category = req.query.category as EmailLogCategory | undefined;
         const search = req.query.search as string | undefined;
-        const logs = await getAllEmailLogs(page, limit, status, category, search);
+        const logs = await mailRepository.getAllEmailLogs(page, limit, status, category, search);
         return res.status(200).json({
             success: true,
             message: 'Email logs retrieved successfully',
@@ -56,7 +56,7 @@ export const resendEmail = async (req: Request<{ logId: string }>, res: Response
             return res.status(400).json({ success: false, message: 'Invalid payload: logId is missing' });
         }
 
-        const emailLog = await getEmailLogById(parseInt(logId))
+        const emailLog = await mailRepository.getEmailLogById(parseInt(logId));
 
         if (emailLog) {
             if (emailLog.status === EmailLogStatus.PENDING ) {
