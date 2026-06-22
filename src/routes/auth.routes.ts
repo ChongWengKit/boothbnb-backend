@@ -1,6 +1,5 @@
 import { Router } from 'express';
-import { signup, signin, googleSignUp, googleSignIn, forgotPassword, resetPassword, adminSignup } from '../controllers/auth.controller.js';
-import { verify } from '../controllers/email_verification.js';
+import { signup, verify, signin, googleSignUp, googleSignIn, forgotPassword, resetPassword, adminSignup } from '../controllers/auth.controller.js';
 import { checkAuthenticationToken } from '../middleware/auth.js';
 import { updateProfilePhoto } from '../controllers/account.controller.js';
 
