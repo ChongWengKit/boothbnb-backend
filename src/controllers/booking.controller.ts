@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { ApiResponse } from '../types/types.js';
-import { PaymentStatus } from '@prisma/client';
 import { Role } from '@prisma/client';
+import { bookingService } from '../services/booking.service.js';
 import { eventRepository } from '../repository/event.repository.js';
 export const getUserBookings = async (req: Request, res: Response<ApiResponse<any>>) => {
     try {
@@ -11,9 +11,9 @@ export const getUserBookings = async (req: Request, res: Response<ApiResponse<an
         const userId = parseInt(req.user.id);
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
+        const result = await bookingService.getUserBookings(userId, page, limit);
 
-        const { bookings, total } = await eventRepository.getBookingsByUserId(userId, page, limit);
-        const totalPages = Math.ceil(total / limit);
+        const { bookings, total, totalPages } = result;
 
         return res.status(200).json({
             success: true,
@@ -43,9 +43,8 @@ export const getUserPaidBookings = async (req: Request, res: Response<ApiRespons
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
 
-        const { bookings, total } = await eventRepository.getBookingsByUserId(userId, page, limit, PaymentStatus.PAID);
-        const totalPages = Math.ceil(total / limit);
-
+        const result = await bookingService.getUserPaidBookings(userId, page, limit);
+        const { bookings, total, totalPages } = result;
         return res.status(200).json({
             success: true,
             message: 'Bookings retrieved successfully.',

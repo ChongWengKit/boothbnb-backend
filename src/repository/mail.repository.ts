@@ -1,5 +1,5 @@
 
-import pkg, { EmailLogCategory, EmailLogStatus } from '@prisma/client';
+import { EmailLogCategory, EmailLogStatus } from '@prisma/client';
 import { prisma } from '../lib/db.js';
 
 const logEmail = async (user_id: number, category: EmailLogCategory, payload: Record<string, any>, status: EmailLogStatus = EmailLogStatus.PENDING, email_id?: string ) => {

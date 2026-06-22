@@ -1,11 +1,6 @@
 import { Request, Response } from 'express';
 import Stripe from 'stripe';
-import { prisma } from '../lib/db.js';
-import {eventRepository} from '../repository/event.repository.js';
-import {authRepository} from '../repository/auth.repository.js';
-import { BoothType } from '../types/types.js';
-import { PaymentStatus } from '@prisma/client';
-import { attemptSend } from '../services/mail.service.js';
+import { stripeService } from '../services/stripe.service.js';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: '2026-03-25.dahlia',
 });
@@ -15,40 +10,10 @@ export const createStripeConnectAccount = async (req: Request, res: Response) =>
         if (!req.user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
-        const userId = parseInt(req.user.id);
-        const user = await prisma.users.findUnique({ where: { id: userId } });
-
-        if (!user) return res.status(404).json({ success: false, message: "User not found" });
-
-        let stripeAccountId = user.stripe_account_id;
-
-        if (!stripeAccountId) {
-            const account = await stripe.accounts.create({
-                type: 'standard',
-                country: 'MY',
-                email: user.email,
-                capabilities: {
-                    transfers: { requested: true },
-                    card_payments: { requested: true },
-                },
-                business_type: 'individual'
-            });
-            stripeAccountId = account.id;
-            await prisma.users.update({
-                where: { id: userId },
-                data: { stripe_account_id: stripeAccountId }
-            });
-        }
-
-        const accountLink = await stripe.accountLinks.create({
-            account: stripeAccountId,
-            refresh_url: `${process.env.FRONTEND_DOMAIN}/stripe-connect?error=refresh`,
-            return_url: `${process.env.FRONTEND_DOMAIN}/stripe-connect`,
-            type: 'account_onboarding'
-        });
-
-        return res.status(200).json({ success: true, url: accountLink.url });
-    } catch (error) {
+        const accountLinkUrl = await stripeService.createStripeConnectAccount(parseInt(req.user.id));
+        return res.status(200).json({ success: true, url: accountLinkUrl });
+    } catch (error:any) {
+        if(error.message === 'USER_NOT_FOUND') return res.status(404).json({ success: false, message: 'User not found.' });
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
@@ -59,32 +24,8 @@ export const checkStripeStatus = async (req: Request, res: Response) => {
         if (!req.user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
-        const userId = parseInt(req.user.id);
-        const user = await prisma.users.findUnique({ where: { id: userId } });
-
-        if (!user) return res.status(404).json({ success: false, message: "User not found" });
-
-        let payoutsEnabled = user.stripe_payout_enabled;
-        let hasAccountId = !!user.stripe_account_id;
-
-        if (hasAccountId && !payoutsEnabled) {
-            const account = await stripe.accounts.retrieve(user.stripe_account_id!);
-            if (!account.details_submitted) {
-                await prisma.users.update({
-                    where: { id: userId },
-                    data: {
-                        stripe_account_id: null,
-                        stripe_payout_enabled: false
-                    }
-                });
-                hasAccountId = false;
-                payoutsEnabled = false;
-                user.stripe_account_id = null;
-            } else if (account.payouts_enabled && !payoutsEnabled) {
-                await authRepository.updateUserStripeStatus(userId, true);
-                payoutsEnabled = true;
-            }
-        }
+        const result = await stripeService.checkStripeStatus(parseInt(req.user.id));
+        const { hasAccountId, payoutsEnabled, user } = result;
         return res.json({ hasAccountId, payoutsEnabled, accountId: user.stripe_account_id });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -108,71 +49,13 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
     }
     try {
         if (event.type === 'checkout.session.completed') {
-            const session = event.data.object as Stripe.Checkout.Session;
-            const metadata = session.metadata;
-
-            if (metadata && metadata.bookingId && metadata.boothId) {
-                const bookingId = parseInt(metadata.bookingId);
-                const boothId = parseInt(metadata.boothId);
-
-                const booking = await eventRepository.getBookingById(bookingId);
-                if (booking?.payment_status === PaymentStatus.PAID) {
-                    return res.status(200).json({ received: true });
-                }
-
-                const sessionWithDetails = await stripe.checkout.sessions.retrieve(session.id, {
-                    expand: ['payment_intent.latest_charge'],
-                });
-
-                const paymentIntent = sessionWithDetails.payment_intent as Stripe.PaymentIntent;
-                const charge = paymentIntent?.latest_charge as Stripe.Charge;
-                
-                const result = await eventRepository.finalizeBoothBooking(bookingId, boothId, {
-                    cardBrand: charge?.payment_method_details?.card?.brand ?? '',
-                    cardLast4: charge?.payment_method_details?.card?.last4 ?? '',
-                    stripeChargeId: charge?.id,
-                    receiptUrl: charge?.receipt_url ?? '',
-                });
-
-                if (result.confirmationLog) {
-                    await attemptSend(result.confirmationLog.id);
-                }
-                if (result.vendorPaidLog) {
-                    await attemptSend(result.vendorPaidLog.id);
-                }
-
-            }
+           await stripeService.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
         }
         else if (event.type === 'checkout.session.expired') {
-            const session = event.data.object as Stripe.Checkout.Session;
-            const metadata = session.metadata;
-
-            if (metadata && metadata.bookingId && metadata.boothId) {
-                const bookingId = parseInt(metadata.bookingId);
-                const boothId = parseInt(metadata.boothId);
-
-                const booking = await eventRepository.getBookingById(bookingId);
-                if (booking?.payment_status === PaymentStatus.FAILED) {
-                    return res.status(200).json({ received: true });
-                }
-
-                await eventRepository.confirmBoothBooking(bookingId, PaymentStatus.FAILED);
-                await eventRepository.confirmUpdateBoothStatus(boothId, BoothType.AVAILABLE);
-
-            }
+           await stripeService.handleCheckoutExpired(event.data.object as Stripe.Checkout.Session);
         }
         else if (event.type === 'capability.updated') {
-            const capability = event.data.object as Stripe.Capability;
-            const accountId: string = typeof capability.account === 'string'
-                ? capability.account
-                : capability.account.id;
-            if (capability.id === 'transfers') {
-                if ((capability.status as string) === 'disabled') {
-                    await authRepository.disableUserStripePayoutStatus(accountId);
-                } else if ((capability.status as string) === 'active') {
-                    await authRepository.enableUserStripePayoutStatus(accountId);
-                }
-            }
+            await stripeService.handleCapabilityUpdated(event.data.object);
         }
         return res.status(200).json({ received: true });
     } catch (error) {

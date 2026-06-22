@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { checkAuthenticationToken } from '../middleware/auth.js';
-import { getAccount, getPublicAccount, updateProfilePhoto } from '../controllers/account.controller.js';
+import { getAccount, getPublicAccount } from '../controllers/account.controller.js';
 
 const router = Router();
 

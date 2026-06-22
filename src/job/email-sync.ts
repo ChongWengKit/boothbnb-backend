@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import { prisma } from '../lib/db.js';
 import { EmailLogStatus } from '@prisma/client';
-import { syncEmailStatus } from '../services/mail.service.js';
+import { mailService } from '../services/mail.service.js';
 
 export async function runEmailSync() {
     try {
@@ -13,7 +13,7 @@ export async function runEmailSync() {
         });
 
         for (const log of pendingLogs) {
-            await syncEmailStatus(log.email_id!);
+            await mailService.syncEmailStatus(log.email_id!);
         }
     } catch (error) {
     }

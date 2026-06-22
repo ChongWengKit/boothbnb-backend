@@ -1,44 +1,19 @@
 import { Request, Response } from 'express';
-import crypto from 'crypto';
 import { ApiResponse } from '../types/types.js';
-import { EmailLogCategory } from '@prisma/client';
 import { UpdateAdminRequestParams } from '../types/types.js';
 import { ActionType, AdminRequestStatus, Role } from '../types/types.js';
-import { attemptSend } from '../services/mail.service.js';
-import { adminRepository } from '../repository/admin.repository.js';
-import { authRepository } from '../repository/auth.repository.js';
-import validator from 'validator';
+import { adminService } from '../services/admin.service.js';
 export const registerAdmin = async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email is required.' });
-    }
-    if (!validator.isEmail(email)) {
-      return res.status(400).json({ success: false, message: 'Invalid email format.' });
-    }
-    
-    const existingUser = await authRepository.findUserByEmail(email);
-    if (existingUser) {
-      return res.status(400).json({ success: false, message: 'Email already registered.' });
-    }
 
-    const username = email.split('@')[0] + Math.floor(Math.random() * 1000)
-    const { user, log } = await adminRepository.createUserAndLogEmail(
-      {
-        email,
-        username,
-        role: Role.ADMIN,
-        password: crypto.randomBytes(16).toString('hex'),
-      },
-      EmailLogCategory.ADMIN_INVITATION,
-      { email, username }
-    );
-
-    await attemptSend(log.id);
+    await adminService.registerAdmin(email);
 
     return res.status(201).json({ success: true, message: 'Admin invitation sent successfully.' });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === 'EXISTING_USER') {
+      return res.status(400).json({ success: false, message: 'User with this email already exists.' });
+    }
     return res.status(500).json({ success: false, message: 'Internal server error registering admin' });
   }
 };
@@ -46,34 +21,19 @@ export const registerAdmin = async (req: Request, res: Response) => {
 export const updateAdminApproval = async (req: Request<UpdateAdminRequestParams>, res: Response<ApiResponse<any>>) => {
   try {
     const { id, status } = req.body;
+    console.log(id,status)
     if (!id || !status) {
       return res.status(400).json({ success: false, message: 'Invalid parameters.' });
     }
-    const result = await adminRepository.findAdminRequestById(id);
-    if (!result) {
-      return res.status(404).json({ success: false, message: `Admin request with id ${id} does not exist` });
-    }
-    if (result.action_type === ActionType.HOST_APPROVAL) {
-
-      if (status === AdminRequestStatus.APPROVED) {
-        const user = await authRepository.findUserById(result.user_id);
-        if (!user) {
-          return res.status(404).json({ success: false, message: `User with id ${result.user_id} does not exist` });
-        }
-        const { log} = await adminRepository.approveAdminRequestAndVerifyUser(id, result.user_id, status, EmailLogCategory.HOST_APPROVED, {
-          username: user.username,
-          email: user.email,
-        });
-        await attemptSend(log.id);
-      }
-    }
-
+    await adminService.processAdminApproval(id, status);
     return res.status(200).json({
       success: true,
       message: 'Request updated successfully.',
       data: { id, status },
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === "REQUEST_NOT_FOUND") return res.status(404).json({ success: false, message: 'Request not found' });
+    if (error.message === "USER_NOT_FOUND") return res.status(404).json({ success: false, message: 'User not found' });
     return res.status(500).json({ success: false, message: 'Internal server error updating admin request' });
   }
 };
@@ -81,7 +41,7 @@ export const updateAdminApproval = async (req: Request<UpdateAdminRequestParams>
 export const getApprovalRequests = async (req: Request<{}>, res: Response<ApiResponse<any>>) => {
   try {
     const { page = 1, limit = 10, action_type, search, status } = req.query;
-    const requests = await adminRepository.getAdminRequests(Number(page), Number(limit), action_type as ActionType, search as string, status as AdminRequestStatus);
+    const requests = await adminService.getAdminRequests(Number(page), Number(limit), action_type as ActionType, search as string, status as AdminRequestStatus);
     return res.status(200).json({
       success: true,
       message: 'Approval requests retrieved successfully.',

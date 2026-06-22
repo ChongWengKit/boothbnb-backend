@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import { prisma } from '../lib/db.js';
 import { EmailLogStatus } from '@prisma/client';
-import { attemptSend } from '../services/mail.service.js';
+import { mailService } from '../services/mail.service.js';
 
 export async function runEmailRetry() {
     try {
@@ -13,7 +13,7 @@ export async function runEmailRetry() {
         });
 
         for (const log of failedLogs) {
-            await attemptSend(log.id);
+            await mailService.attemptSend(log.id);
         }
     } catch (error) {
     }

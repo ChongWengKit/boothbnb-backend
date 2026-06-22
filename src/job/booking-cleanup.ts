@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import Stripe from 'stripe';
 import { PaymentStatus } from '@prisma/client';
 import { BoothType } from '../types/types.js';
-import { attemptSend } from '../services/mail.service.js';
+import { mailService } from '../services/mail.service.js';
 import { eventRepository} from '../repository/event.repository.js';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: '2026-03-25.dahlia',
@@ -36,10 +36,10 @@ export async function runBookingCleanup() {
                     });
 
                     if (result.confirmationLog) {
-                        await attemptSend(result.confirmationLog.id);
+                        await mailService.attemptSend(result.confirmationLog.id);
                     }
                     if (result.vendorPaidLog) {
-                        await attemptSend(result.vendorPaidLog.id);
+                        await mailService.attemptSend(result.vendorPaidLog.id);
                     }
                     continue;
                 }

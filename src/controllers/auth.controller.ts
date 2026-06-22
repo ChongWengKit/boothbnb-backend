@@ -1,20 +1,12 @@
 import { Request, Response } from 'express';
-import { v2 as cloudinary } from 'cloudinary';
 import { ApiResponse } from '../types/types.js';
-import jwt from 'jsonwebtoken';
 import { Role } from '../types/types.js';
 import { SignInResponse } from '../types/types.js';
-import crypto from 'crypto';
-import { prisma } from '../lib/db.js';
-import { Prisma, EmailLogCategory, EmailLogStatus } from '@prisma/client';
-import { attemptSend } from '../services/mail.service.js';
 import { SignupData, SignupRequest } from '../types/types.js';
 import { SignInRequest } from '../types/types.js';
-import { ActionType } from '../types/types.js';
-import validator from 'validator';
-import { authRepository } from '../repository/auth.repository.js';
-import { adminRepository } from '../repository/admin.repository.js';
-import { mailRepository } from '../repository/mail.repository.js';
+import { authService } from '../services/auth.service.js';
+import { accountService } from '../services/account.service.js';
+import { mailService } from '../services/mail.service.js';
 //test vercel
 export const googleSignIn = async (req: Request<{ token: string }>, res: Response<ApiResponse<SignInResponse>>) => {
   try {
@@ -23,43 +15,10 @@ export const googleSignIn = async (req: Request<{ token: string }>, res: Respons
       return res.status(400).json({ success: false, message: 'Token is required.' });
     }
 
-    const url = `https://oauth2.googleapis.com/tokeninfo?id_token=${token}`;
-    const response = await fetch(url);
-    const data = await response.json();
-    const { iat, exp } = data;
-    if (!iat || !exp || exp < Date.now() / 1000) {
-      return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
-    }
-    const googleClientId = process.env.GOOGLE_CLIENT_ID;
-    if (googleClientId !== data.aud || googleClientId !== data.azp) {
-      return res.status(401).json({ success: false, message: 'Unauthorized.' });
-    }
-    const email = data.email;
-
-    let user = await authRepository.findUserByEmail(email);
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User does not exist. Please sign up first.' });
-    }
-    else {
-      if (user.password !== null && user.salt !== null) {
-        return res.status(400).json({ success: false, message: 'Please sign in with email and password.' });
-      }
-    }
-
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      return res.status(500).json({ success: false, message: 'JWT_SECRET is not defined.' });
-    }
-
-    const authenticationToken = jwt.sign({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-    }, secret, {
-      expiresIn: '30d',
-    });
-
+    const tokenResult = await accountService.verifyGoogleToken(token);
+    let result = await accountService.googleSignIn(tokenResult.email);
+    let user = result.user;
+    let authenticationToken = result.authenticationToken;
     return res.status(200).json({
       success: true,
       message: 'User signed up successfully.',
@@ -73,7 +32,19 @@ export const googleSignIn = async (req: Request<{ token: string }>, res: Respons
         profile_photo: user.profile_photo,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === "INVALID_TOKEN") {
+      return res.status(401).json({ success: false, message: 'Invalid token.' });
+    }
+    if (error.message === "EXPIRED_TOKEN") {
+      return res.status(401).json({ success: false, message: 'Expired token.' });
+    }
+    if (error.message === "USER_NOT_FOUND") {
+      return res.status(404).json({ success: false, message: 'User does not exist. Please sign up first.' });
+    }
+    if (error.message === "USER_ALREADY_REGISTERED") {
+      return res.status(400).json({ success: false, message: 'Please sign in with email and password.' });
+    }
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
@@ -85,58 +56,8 @@ export const googleSignUp = async (req: Request<{ token: string, role: Role }>, 
       return res.status(400).json({ success: false, message: 'Token is required.' });
     }
 
-    const url = `https://oauth2.googleapis.com/tokeninfo?id_token=${token}`;
-    const response = await fetch(url);
-    const data = await response.json();
-    const { iat, exp } = data;
-    if (!iat || !exp || exp < Date.now() / 1000) {
-      return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
-    }
-    const googleClientId = process.env.GOOGLE_CLIENT_ID;
-    if (googleClientId !== data.aud || googleClientId !== data.azp) {
-      return res.status(401).json({ success: false, message: 'Unauthorized.' });
-    }
-    const email = data.email;
-    const name = data.name + Math.floor(Math.random() * 10000);
-    const photo = data.picture;
-    let user = await authRepository.findUserByEmail(email);
-    const allowedRoles = [Role.HOST, Role.VENDOR];
-
-    if (!allowedRoles.includes(role)) {
-      return res.status(400).json({ success: false, message: 'Invalid role.' });
-    }
-    if (!user) {
-      let is_verfied = true;
-      if (role === Role.HOST) {
-        is_verfied = false;
-      }
-
-      let profile_photo = null;
-      if (photo) {
-        try {
-          cloudinary.config({
-            cloud_name: process.env.CLOUDINARY_CLOUD_NAME as string,
-            api_key: process.env.CLOUDINARY_API_KEY as string,
-            api_secret: process.env.CLOUDINARY_API_SECRET as string,
-          });
-          const uploadResponse = await cloudinary.uploader.upload(photo, {
-            folder: 'Profiles',
-          });
-          profile_photo = uploadResponse.secure_url;
-        } catch (uploadError) {
-        }
-      }
-      ({ user } = await authRepository.createUser({
-        email,
-        username: name,
-        role: role,
-        is_verified: is_verfied,
-        profile_photo: profile_photo,
-      }, false));
-    }
-    else {
-      return res.status(409).json({ success: false, message: 'User already exists. Please sign in instead.' });
-    }
+    const { email, name, picture } = await accountService.verifyGoogleToken(token);
+    const user = await accountService.googleSignUp(email, role, name, picture);
     if (role === Role.HOST) {
       return res.status(201).json({
         success: true,
@@ -149,19 +70,7 @@ export const googleSignUp = async (req: Request<{ token: string, role: Role }>, 
         },
       });
     }
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      return res.status(500).json({ success: false, message: 'JWT_SECRET is not defined.' });
-    }
-
-    const authenticationToken = jwt.sign({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-    }, secret, {
-      expiresIn: '30d',
-    });
+    const authenticationToken = await authService.createAuthenticationToken(user.id, user.username, user.email, user.role);
 
     return res.status(200).json({
       success: true,
@@ -176,7 +85,10 @@ export const googleSignUp = async (req: Request<{ token: string, role: Role }>, 
         profile_photo: user.profile_photo,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === "USER_ALREADY_REGISTERED") {
+      return res.status(400).json({ success: false, message: 'Please sign in with email and password.' });
+    }
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
@@ -188,31 +100,22 @@ export const resetPassword = async (req: Request<{ password: string, token: stri
       return res.status(400).json({ success: false, message: 'Password and token are required.' });
     }
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-    const resetToken = await authRepository.getResetTokenByToken(hashedToken);
-    if (!resetToken) {
-      return res.status(404).json({ success: false, message: 'Token not found.' });
-    }
-
-    if (new Date(resetToken.expires_in) < new Date()) {
-      return res.status(401).json({ success: false, message: 'Token has expired.' });
-    }
-
-    const user = await authRepository.findUserById(resetToken.user_id);
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found.' });
-    }
-
-    const salt = crypto.randomBytes(16).toString('hex');
-    const hashedPassword = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
-
-    await authRepository.resetUserPasswordAndRemoveToken(resetToken.user_id, hashedPassword, salt, hashedToken);
+    await accountService.resetPassword(password, token);
 
     return res.status(200).json({
       success: true,
       message: 'Password reset successfully.',
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === "TOKEN_NOT_FOUND") {
+      return res.status(401).json({ success: false, message: 'Invalid token.' });
+    }
+    if (error.message === "EXPIRED_TOKEN") {
+      return res.status(401).json({ success: false, message: 'Expired token.' });
+    }
+    if (error.message === "USER_NOT_FOUND") {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
@@ -225,74 +128,33 @@ export const adminSignup = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Missing required fields.' });
     }
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-
-    const adminToken = await authRepository.getAdminTokenByToken(hashedToken);
-
-    if (!adminToken || new Date(adminToken.expires_in) < new Date()) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired invitation token.' });
-    }
-
-    const user = await authRepository.findUserByEmail(adminToken.email);
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'Invited user record not found.' });
-    }
-
-    const existingUsername = await authRepository.findUserByUsername(username);
-    if (existingUsername) {
-      return res.status(400).json({ success: false, message: 'Username is already taken.' });
-    }
-
-    const salt = crypto.randomBytes(16).toString('hex');
-    const hashedPassword = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
-    await authRepository.finalizeUserRegistrationAndRemoveToken(user.id, {
-      username,
-      password: hashedPassword,
-      salt,
-      is_verified: true
-    }, hashedToken);
+    await accountService.adminSignUp(username, password, token);
 
     return res.status(200).json({ success: true, message: 'Admin account set up successfully. You can now log in.' });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === "TOKEN_ERROR") {
+      return res.status(401).json({ success: false, message: 'Invalid token.' });
+    }
+    if (error.message === "USER_NOT_FOUND") {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+    if (error.message === "USERNAME_ALREADY_TAKEN") {
+      return res.status(400).json({ success: false, message: 'Username already taken.' });
+    }
     return res.status(500).json({ success: false, message: 'Internal server error during admin signup.' });
   }
 };
 
 export const signin = async (req: Request<{}, {}, SignInRequest>, res: Response<ApiResponse<SignInResponse>>) => {
   const { email, password } = req.body;
-  const secret = process.env.JWT_SECRET;
   try {
-    if (!secret) {
-      return res.status(500).json({ success: false, message: 'JWT_SECRET is not defined.' });
-    }
-
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Email and password are required.' });
     }
 
-    const user = await authRepository.findUserByEmail(email);
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found.' });
-    }
-    if (user.is_verified === false) {
-      return res.status(403).json({ success: false, message: 'Email not verified. Please verify your email before signing in.' });
-    }
-    if (user.password === null || user.salt === null) {
-      return res.status(400).json({ success: false, message: 'Password is incorrect.' });
-    }
-    const hashedPassword = crypto.pbkdf2Sync(password, user.salt, 1000, 64, 'sha512').toString('hex');
-    if (hashedPassword !== user.password) {
-      return res.status(400).json({ success: false, message: 'Password is incorrect.' });
-    }
+    const user = await accountService.signIn(email, password);
+    const token = await authService.createAuthenticationToken(user.id, user.username, user.email, user.role);
 
-    const token = jwt.sign({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-    }, secret, {
-      expiresIn: '30d',
-    });
     return res.status(200).json({
       success: true,
       message: 'User signed in successfully.',
@@ -306,7 +168,17 @@ export const signin = async (req: Request<{}, {}, SignInRequest>, res: Response<
         profile_photo: user.profile_photo,
       },
     });
-  } catch (error) {
+  } catch (error:any) {
+    if(error.message === "USER_NOT_FOUND") {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+    if(error.message === "PASSWORD_INCORRECT") {
+      return res.status(400).json({ success: false, message: 'Invalid password.' });
+    }
+    if(error.message === "USER_NOT_VERIFIED") {
+      return res.status(401).json({ success: false, message: 'User not verified.' });
+    }
+
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
@@ -321,49 +193,9 @@ export const signup = async (req: Request<{}, {}, SignupRequest>, res: Response<
       return res.status(400).json({ success: false, message: 'Email, username, and password are required.' });
     }
 
-    const allowedRoles = [Role.HOST, Role.VENDOR];
-
-    if (!allowedRoles.includes(role)) {
-      return res.status(400).json({ success: false, message: 'Invalid role.' });
-    }
-    const existingEmail = await authRepository.findUserByEmail(email);
-    if (existingEmail && existingEmail.is_verified) {
-      return res.status(500).json({ success: false, message: 'Email already exist.' });
-    }
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-    if (existingEmail && existingEmail.created_at > thirtyMinutesAgo) {
-      return res.status(409).json({ success: false, message: 'Email already exists and was created within the last 30 minutes. Please try again later.' });
-    }
-    if (existingEmail) {
-      await prisma.verify_tokens.deleteMany({
-        where: {
-          user_id: existingEmail.id,
-        },
-      });
-      await adminRepository.deleteUserAndAdminRequests(existingEmail.id);
-    }
-    if (!validator.isEmail(email)) {
-      return res.status(400).json({ success: false, message: 'Invalid email format.' });
-    }
-    const existingUsername = await authRepository.findUserByUsername(username);
-    if (existingUsername) {
-      return res.status(400).json({ success: false, message: 'Username already exists.' });
-    }
-
-    if (username.length > maxUsernameLength) {
-      return res.status(400).json({ success: false, message: `Username cannot exceed ${maxUsernameLength} characters.` });
-    }
-
-    const salt = crypto.randomBytes(16).toString('hex');
-    const hashedPassword = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
-
-    const { user, log } = await authRepository.createUser({
-      email,
-      username,
-      password: hashedPassword,
-      role,
-      salt,
-    }, true);
+    const result = await accountService.signUp(email, username, password, role);
+    const user = result.user;
+    const log = result.log;
 
     if (role === Role.HOST) {
       return res.status(200).json({
@@ -378,7 +210,7 @@ export const signup = async (req: Request<{}, {}, SignupRequest>, res: Response<
       });
     }
     if (log) {
-      await attemptSend(log.id);
+      await mailService.attemptSend(log.id);
     }
 
     return res.status(201).json({
@@ -392,7 +224,22 @@ export const signup = async (req: Request<{}, {}, SignupRequest>, res: Response<
       },
     });
 
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === "USERNAME_TOO_LONG") {
+      return res.status(400).json({ success: false, message: `Username must be less than ${maxUsernameLength} characters.` });
+    }
+    if(error.message === "USERNAME_ALREADY_TAKEN") {
+      return res.status(400).json({ success: false, message: 'Username already taken.' });
+    }
+    if(error.message === "EMAIL_ALREADY_EXIST") {
+      return res.status(400).json({ success: false, message: 'Email already taken.' });
+    }
+    if(error.message === "INVALID_EMAIL") {
+      return res.status(400).json({ success: false, message: 'Invalid email.' });
+    }
+    if(error.message === "INVALID_ROLE"){
+      return res.status(400).json({ success: false, message: 'Invalid role.' });
+    }
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
@@ -404,14 +251,12 @@ export const forgotPassword = async (req: Request<{ email: string }>, res: Respo
       return res.status(400).json({ success: false, message: 'Email is required.' });
     }
 
-    const user = await authRepository.findUserByEmail(email);
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User with email does not exist.' });
-    }
-    const log = await mailRepository.logEmail(user.id, EmailLogCategory.PASSWORD_RESET, { email, name: user.username });
-    await attemptSend(log.id);
+    await accountService.forgotPassword(email);
     return res.status(200).json({ success: true, message: 'Reset password email sent successfully.' });
-  } catch (error) {
+  } catch (error:any) {
+    if( error.message === "USER_NOT_FOUND") {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
@@ -419,34 +264,22 @@ export const forgotPassword = async (req: Request<{ email: string }>, res: Respo
 export const verify = async (req: Request, res: Response<ApiResponse<{ authentication_token: string, profile_photo: string | null }>>) => {
   try {
     const { token } = req.body;
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      return res.status(500).json({ success: false, message: 'JWT_SECRET is not defined.' });
-    }
-
     if (!token) {
       return res.status(400).json({ success: false, message: 'Token is required.' });
     }
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-    const verifyToken = await authRepository.getVerifyTokenByToken(hashedToken);
-    if (!verifyToken) {
-      return res.status(404).json({ success: false, message: 'Token not found.' });
-    }
-
-    if (new Date(verifyToken.expires_in) < new Date()) {
-      return res.status(401).json({ success: false, message: 'Token has expired.' });
-    }
-    const user = await authRepository.verifyUser(verifyToken.user_id);
-
-    const authenticationToken = jwt.sign({ id: user.id, username: user.username, email: user.email, role: user.role }, secret, {
-      expiresIn: '30d',
-    });
-
-    await authRepository.deleteVerifyTokenByToken(hashedToken);
+    const result = await accountService.verifyAccount(token);
+    const user = result.user;
+    const authenticationToken = result.authenticationToken;
 
     return res.status(200).json({ success: true, message: 'Email verified successfully.', data: { authentication_token: authenticationToken, profile_photo: user.profile_photo } });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: (error as Error).message });
+  } catch (error:any) {
+    if(error.message === "TOKEN_NOT_FOUND") {
+      return res.status(401).json({ success: false, message: 'Invalid token.' });
+    }
+    if(error.message === "TOKEN_EXPIRED") {
+      return res.status(401).json({ success: false, message: 'Expired token.' });
+    }
+    return res.status(500).json({ success: false, message: 'Internal server error'  });
   }
 }

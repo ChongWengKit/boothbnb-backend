@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import { bookingCleanupHandler, currencyUpdateHandler, emailRetryHandler, emailSyncHandler } from '../controllers/cron.controller.js';
 import { authenticateCron } from '../middleware/cron.js';
 

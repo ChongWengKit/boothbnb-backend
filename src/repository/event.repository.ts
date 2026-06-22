@@ -2,7 +2,6 @@ import { Prisma, PaymentStatus, EmailLogCategory, EmailLogStatus } from '@prisma
 import { CreateEventRequest, EventStatus, SearchEventRequest, UpdateEventRequest, BoothType } from '../types/types.js';
 import { prisma } from '../lib/db.js';
 import * as slugify from 'slugify';
-import { v4 as uuidv4 } from 'uuid';
 
 type EventSearchResult = Prisma.eventsGetPayload<{
   select: {

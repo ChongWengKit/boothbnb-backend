@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { EmailLogCategory, EmailLogStatus } from '@prisma/client';
 import { mailRepository } from '../repository/mail.repository.js';
-import { attemptSend } from '../services/mail.service.js';
+import { mailService } from '../services/mail.service.js';
 export const handleResendWebhook = async (req: Request, res: Response) => {
     try {
         const { type, data } = req.body;
@@ -13,17 +13,7 @@ export const handleResendWebhook = async (req: Request, res: Response) => {
         const emailId = data.email_id;
         let newStatus: EmailLogStatus | null = null;
 
-        if (type === 'email.sent' || type === 'email.delivered') {
-            newStatus = EmailLogStatus.SUCCESSFUL;
-        } else if (type === 'email.bounced') {
-            newStatus = EmailLogStatus.BOUNCED;
-        } else if (type === 'email.complained') {
-            newStatus = EmailLogStatus.COMPLAINED;
-        }
-
-        if (newStatus) {
-            await mailRepository.updateEmailLogStatus(emailId, newStatus);
-        }
+        await mailService.handleResendWebhook(type, emailId, newStatus);
 
         return res.status(200).json({ received: true });
     } catch (error) {
@@ -56,20 +46,12 @@ export const resendEmail = async (req: Request<{ logId: string }>, res: Response
             return res.status(400).json({ success: false, message: 'Invalid payload: logId is missing' });
         }
 
-        const emailLog = await mailRepository.getEmailLogById(parseInt(logId));
-
-        if (emailLog) {
-            if (emailLog.status === EmailLogStatus.PENDING ) {
-                return res.status(400).json({ success: false, message: 'Email is already pending' });
-            }
-            if (emailLog.status === EmailLogStatus.BOUNCED || emailLog.status === EmailLogStatus.COMPLAINED) {
-                return res.status(400).json({ success: false, message: 'Invalid Email' });
-            }
-            await attemptSend(emailLog.id);
-        }
+        await mailService.resentEmail(logId);
 
         return res.status(200).json({ success: true, message: 'Email resent successfully' });
-    } catch (error) {
+    } catch (error: any) {
+        if(error.message === 'PENDING_EMAIL') return res.status(400).json({ success: false, message: 'Email is still pending' });
+        if(error.message === 'INVALID_EMAIL') return res.status(400).json({ success: false, message: 'Email is invalid' });
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };

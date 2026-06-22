@@ -9,12 +9,12 @@ import pkg, { EmailLogCategory, EmailLogStatus } from '@prisma/client';
 import { prisma } from '../lib/db.js';
 import { JSX } from 'react';
 import crypto from 'crypto';
-import {mailRepository}  from '../repository/mail.repository.js';
+import { mailRepository } from '../repository/mail.repository.js';
 import { authRepository } from '../repository/auth.repository.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-export const attemptSend = async (logId: number) => {
+const attemptSend = async (logId: number) => {
   const log = await prisma.email_logs.findUnique({ where: { id: logId } });
 
   if (!log) return null;
@@ -138,7 +138,7 @@ export const attemptSend = async (logId: number) => {
   }
 };
 
-export const syncEmailStatus = async (emailId: string) => {
+const syncEmailStatus = async (emailId: string) => {
   try {
     const { data, error } = await resend.emails.get(emailId);
     if (error || !data) {
@@ -160,3 +160,32 @@ export const syncEmailStatus = async (emailId: string) => {
   }
 };
 
+const handleResendWebhook = async (type: string, emailId: string, newStatus?: EmailLogStatus | null) => {
+  if (type === 'email.sent' || type === 'email.delivered') {
+    newStatus = EmailLogStatus.SUCCESSFUL;
+  } else if (type === 'email.bounced') {
+    newStatus = EmailLogStatus.BOUNCED;
+  } else if (type === 'email.complained') {
+    newStatus = EmailLogStatus.COMPLAINED;
+  }
+
+  if (newStatus) {
+    await mailRepository.updateEmailLogStatus(emailId, newStatus);
+  }
+}
+
+const resentEmail = async (logId: string) => {
+  const emailLog = await mailRepository.getEmailLogById(parseInt(logId));
+
+  if (emailLog) {
+    if (emailLog.status === EmailLogStatus.PENDING) {
+      throw new Error('PENDING_EMAIL')
+    }
+    if (emailLog.status === EmailLogStatus.BOUNCED || emailLog.status === EmailLogStatus.COMPLAINED) {
+      throw new Error('INVALID_EMAIL')
+    }
+    await attemptSend(emailLog.id);
+  }
+
+};
+export const mailService = { attemptSend, syncEmailStatus, handleResendWebhook, resentEmail };

@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/db.js';
 const createBookmark = async ( user_id:number, event_id:number ) => {
   return prisma.bookmarks.upsert({
