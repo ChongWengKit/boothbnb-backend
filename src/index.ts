@@ -16,10 +16,10 @@ import adminRoutes from './routes/admin.routes.js';
 import cronRoutes from './routes/cron.routes.js';
 import currencyRoutes from './routes/currency.routes.js';
 import rateLimit from 'express-rate-limit';
-import './job/booking-cleanup.js';
-import './job/email-retry.js';
-import './job/email-sync.js';
-import './job/currency-rate.js'
+import './job/bookingCleanUp.job.js';
+import './job/emailRetry.job.js';
+import './job/emailSync.job.js';
+import './job/currencyRate.job.js';
 dotenv.config();
 import swaggerUi from 'swagger-ui-express';
 import swaggerFile from './swagger-output.json' with { type: 'json' };

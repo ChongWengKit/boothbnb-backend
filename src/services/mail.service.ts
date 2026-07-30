@@ -1,10 +1,10 @@
 import { Resend } from 'resend';
-import { VerifyEmail } from '../emails/verify.js';
-import { ResetPasswordEmail } from '../emails/reset-pass.js';
-import { BookingConfirmedEmail } from '../emails/booking-confirmed.js';
-import { HostApproved } from '../emails/host-approved.js';
-import { AdminInviteEmail } from '../emails/admin-Invite.js';
-import { VendorPaidNotificationEmail } from '../emails/vendor-paid.js';
+import { VerifyEmail } from '../emails/verify.template.js';
+import { ResetPasswordEmail } from '../emails/resetPass.template.js';
+import { BookingConfirmedEmail } from '../emails/bookingConfirmed.template.js';
+import { HostApproved } from '../emails/hostApproved.template.js';
+import { AdminInviteEmail } from '../emails/adminInvite.template.js';
+import { VendorPaidNotificationEmail } from '../emails/vendorPaid.template.js';
 import pkg, { EmailLogCategory, EmailLogStatus } from '@prisma/client';
 import { prisma } from '../lib/db.js';
 import { JSX } from 'react';

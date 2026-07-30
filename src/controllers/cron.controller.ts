@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { runBookingCleanup} from '../job/booking-cleanup.js';
-import { runEmailRetry } from '../job/email-retry.js';
-import { runEmailSync } from '../job/email-sync.js';
-import { runCurrencyUpdate } from '../job/currency-rate.js';
+import { runBookingCleanup} from '../job/bookingCleanUp.job.js';
+import { runEmailRetry } from '../job/emailRetry.job.js';
+import { runEmailSync } from '../job/emailSync.job.js';
+import { runCurrencyUpdate } from '../job/currencyRate.job.js';
 export async function bookingCleanupHandler(req: Request, res: Response) {
     if (req.method !== 'GET') {
         return res.status(405).json({ error: 'Method not allowed' });
