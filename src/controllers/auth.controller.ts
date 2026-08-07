@@ -7,6 +7,7 @@ import { SignInRequest } from '../types/types.js';
 import { authService } from '../services/auth.service.js';
 import { accountService } from '../services/account.service.js';
 import { mailService } from '../services/mail.service.js';
+
 //test vercel
 export const googleSignIn = async (req: Request<{ token: string }>, res: Response<ApiResponse<SignInResponse>>) => {
   try {
@@ -38,6 +39,9 @@ export const googleSignIn = async (req: Request<{ token: string }>, res: Respons
     }
     if (error.message === "EXPIRED_TOKEN") {
       return res.status(401).json({ success: false, message: 'Expired token.' });
+    }
+    if (error.message === "UNAUTHORIZED") {
+      return res.status(401).json({ success: false, message: 'Unauthorized.' });
     }
     if (error.message === "USER_NOT_FOUND") {
       return res.status(404).json({ success: false, message: 'User does not exist. Please sign up first.' });
@@ -86,6 +90,18 @@ export const googleSignUp = async (req: Request<{ token: string, role: Role }>, 
       },
     });
   } catch (error: any) {
+    if (error.message === "INVALID_TOKEN") {
+      return res.status(401).json({ success: false, message: 'Invalid token.' });
+    }
+    if (error.message === "EXPIRED_TOKEN") {
+      return res.status(401).json({ success: false, message: 'Expired token.' });
+    }
+    if (error.message === "UNAUTHORIZED") {
+      return res.status(401).json({ success: false, message: 'Unauthorized.' });
+    }
+    if (error.message === "USER_NOT_FOUND") {
+      return res.status(404).json({ success: false, message: 'User does not exist. Please sign up first.' });
+    }
     if (error.message === "USER_ALREADY_REGISTERED") {
       return res.status(400).json({ success: false, message: 'Please sign in with email and password.' });
     }
@@ -116,6 +132,9 @@ export const resetPassword = async (req: Request<{ password: string, token: stri
     if (error.message === "USER_NOT_FOUND") {
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
+    if (error.message === "INVALID_PASSWORD") {
+      return res.status(400).json({ success: false, message: 'Password must be between 8 and 128 characters.' });
+    }
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
@@ -140,6 +159,9 @@ export const adminSignup = async (req: Request, res: Response) => {
     }
     if (error.message === "USERNAME_ALREADY_TAKEN") {
       return res.status(400).json({ success: false, message: 'Username already taken.' });
+    }
+    if (error.message === "INVALID_PASSWORD") {
+      return res.status(400).json({ success: false, message: 'Password must be between 8 and 128 characters.' });
     }
     return res.status(500).json({ success: false, message: 'Internal server error during admin signup.' });
   }
@@ -224,21 +246,24 @@ export const signup = async (req: Request<{}, {}, SignupRequest>, res: Response<
       },
     });
 
-  } catch (error: any) {
+  } catch (error:any) {
     if (error.message === "USERNAME_TOO_LONG") {
       return res.status(400).json({ success: false, message: `Username must be less than ${maxUsernameLength} characters.` });
     }
-    if(error.message === "USERNAME_ALREADY_TAKEN") {
+    if (error.message === "USERNAME_ALREADY_TAKEN") {
       return res.status(400).json({ success: false, message: 'Username already taken.' });
     }
-    if(error.message === "EMAIL_ALREADY_EXIST") {
+    if (error.message === "EMAIL_ALREADY_EXIST") {
       return res.status(400).json({ success: false, message: 'Email already taken.' });
     }
-    if(error.message === "INVALID_EMAIL") {
+    if (error.message === "INVALID_EMAIL") {
       return res.status(400).json({ success: false, message: 'Invalid email.' });
     }
-    if(error.message === "INVALID_ROLE"){
+    if (error.message === "INVALID_ROLE") {
       return res.status(400).json({ success: false, message: 'Invalid role.' });
+    }
+    if (error.message === "INVALID_PASSWORD") {
+      return res.status(400).json({ success: false, message: 'Password must be between 8 and 128 characters.' });
     }
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
@@ -273,13 +298,13 @@ export const verify = async (req: Request, res: Response<ApiResponse<{ authentic
     const authenticationToken = result.authenticationToken;
 
     return res.status(200).json({ success: true, message: 'Email verified successfully.', data: { authentication_token: authenticationToken, profile_photo: user.profile_photo } });
-  } catch (error:any) {
-    if(error.message === "TOKEN_NOT_FOUND") {
+  } catch (error: any) {
+    if (error.message === "TOKEN_NOT_FOUND") {
       return res.status(401).json({ success: false, message: 'Invalid token.' });
     }
-    if(error.message === "TOKEN_EXPIRED") {
+    if (error.message === "TOKEN_EXPIRED") {
       return res.status(401).json({ success: false, message: 'Expired token.' });
     }
-    return res.status(500).json({ success: false, message: 'Internal server error'  });
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }

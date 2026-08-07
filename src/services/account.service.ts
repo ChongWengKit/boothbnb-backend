@@ -53,14 +53,21 @@ const verifyGoogleToken = async (token: string) => {
     const url = `https://oauth2.googleapis.com/tokeninfo?id_token=${token}`;
     const response = await fetch(url);
     const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error('INVALID_TOKEN');
+    }
+
     const { iat, exp, aud, azp, email, name, picture } = data;
     if (!iat || !exp || exp < Date.now() / 1000) {
-        throw new Error('Invalid or expired token.');
+        throw new Error('EXPIRED_TOKEN');
     }
+
     const googleClientId = process.env.GOOGLE_CLIENT_ID;
-    if (googleClientId !== data.aud || googleClientId !== data.azp) {
-        throw new Error('Unauthorized.');
+    if (googleClientId !== aud || googleClientId !== azp) {
+        throw new Error('UNAUTHORIZED');
     }
+
     return { email, name, picture };
 }
 
@@ -69,7 +76,7 @@ const googleSignUp = async (email: string, role: Role, name: string, picture?: s
     const allowedRoles = [Role.HOST, Role.VENDOR];
 
     if (!allowedRoles.includes(role)) {
-        throw new Error('Invalid role.');
+        throw new Error('INVALID_ROLE');
     }
     if (!user) {
         let is_verfied = true;
@@ -122,6 +129,10 @@ const resetPassword = async (password: string, token: string) => {
         throw new Error('USER_NOT_FOUND');
     }
 
+    if (password.length < 8 || password.length > 128) {
+        throw new Error('INVALID_PASSWORD');
+    }
+
     const salt = crypto.randomBytes(16).toString('hex');
     const hashedPassword = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
 
@@ -145,6 +156,10 @@ const adminSignUp = async (username: string, password: string, token: string) =>
     const existingUsername = await authRepository.findUserByUsername(username);
     if (existingUsername) {
         throw new Error('USERNAME_ALREADY_TAKEN');
+    }
+
+    if (password.length < 8 || password.length > 128) {
+        throw new Error('INVALID_PASSWORD');
     }
 
     const salt = crypto.randomBytes(16).toString('hex');
@@ -208,6 +223,10 @@ const signUp = async (email: string, username: string, password: string, role: R
 
     if (username.length > 50) {
         throw new Error('USERNAME_TOO_LONG');
+    }
+
+    if (password.length < 8 || password.length > 128) {
+        throw new Error('INVALID_PASSWORD');
     }
 
     const salt = crypto.randomBytes(16).toString('hex');

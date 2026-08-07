@@ -1,7 +1,8 @@
 import { BoothType } from '../types/types.js';
 import { bookmarkRepository } from '../repository/bookmark.repository.js';
-const getFavoriteBookmarks = async (userId: string, page: number, limit: number) => {
-    const { bookmarks, total } = await bookmarkRepository.findBookmarkByUserId(parseInt(userId), page, limit);
+import { eventRepository } from '../repository/event.repository.js';
+const getFavoriteBookmarks = async (userId: number, page: number, limit: number) => {
+    const { bookmarks, total } = await bookmarkRepository.findBookmarkByUserId(userId, page, limit);
 
     const formattedEvents = bookmarks.map((item) => {
         const event = item.event;
@@ -31,6 +32,24 @@ const getFavoriteBookmarks = async (userId: string, page: number, limit: number)
     return { bookmarks: formattedEvents, total, totalPages };
 }
 
+const addFavoriteBookmark = async (userId: number, eventId: number) => {
+    const event = await eventRepository.getEventById(eventId);
+    if (!event) {
+        throw new Error('EVENT_NOT_FOUND');
+    }
+    return await bookmarkRepository.createBookmark(userId, eventId);
+}
+
+const removeFavoriteBookmark = async (userId: number, eventId: number) => {
+    const isBookmarked = await bookmarkRepository.isBookmarked(userId, eventId);
+    if (!isBookmarked) {
+        throw new Error('BOOKMARK_NOT_FOUND');
+    }
+    return await bookmarkRepository.deleteBookmark(userId, eventId);
+}
+
 export const bookmarkService = {
     getFavoriteBookmarks,
+    addFavoriteBookmark,
+    removeFavoriteBookmark,
 }

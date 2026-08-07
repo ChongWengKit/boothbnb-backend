@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { EmailLogCategory, EmailLogStatus } from '@prisma/client';
 import { mailRepository } from '../repository/mail.repository.js';
 import { mailService } from '../services/mail.service.js';
+import { parsePageLimit, validatePagination } from '../lib/validation.js';
 export const handleResendWebhook = async (req: Request, res: Response) => {
     try {
         const { type, data } = req.body;
@@ -23,8 +24,10 @@ export const handleResendWebhook = async (req: Request, res: Response) => {
 
 export const getEmailLogs = async (req: Request, res: Response) => {
     try {
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 10;
+        const { page, limit } = parsePageLimit(req.query.page, req.query.limit);
+        if (!validatePagination(page, limit)) {
+            return res.status(400).json({ success: false, message: 'Invalid pagination parameters.' });
+        }
         const status = req.query.status as EmailLogStatus | undefined;
         const category = req.query.category as EmailLogCategory | undefined;
         const search = req.query.search as string | undefined;

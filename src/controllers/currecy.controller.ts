@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { currencyRepository } from '../repository/currency.repository.js';
 import { ApiResponse } from '../types/types.js';
+import { parsePageLimit, validatePagination } from '../lib/validation.js';
 
 export const getCurrency = async (req: Request, res: Response<ApiResponse<any>>) => {
   try {
@@ -23,8 +24,10 @@ export const getCurrency = async (req: Request, res: Response<ApiResponse<any>>)
 
 export const getAllCurrencyDetails = async (req: Request, res: Response<ApiResponse<any>>) => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const { page, limit } = parsePageLimit(req.query.page, req.query.limit);
+    if (!validatePagination(page, limit)) {
+      return res.status(400).json({ success: false, message: 'Invalid pagination parameters.' });
+    }
     const search = req.query.search as string | undefined;
     const status = req.query.status === 'true' ? true : req.query.status === 'false' ? false : undefined;
     const { data, meta } = await currencyRepository.getAllCurrencies(page, limit, search, status);

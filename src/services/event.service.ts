@@ -6,6 +6,7 @@ import { authRepository } from '../repository/auth.repository.js';
 import { currencyRepository } from '../repository/currency.repository.js';
 import { CreateEventRequest } from '../types/types.js';
 import { bookmarkRepository } from '../repository/bookmark.repository.js';
+import { validateCloudinaryImageUrls } from '../lib/validation.js';
 import { PaymentStatus } from '@prisma/client';
 import Stripe from 'stripe';
 
@@ -85,8 +86,8 @@ const getEventsBySearchRequest = async (searchRequest: SearchEventRequest) => {
     return { formattedEvents, total, totalPages };
 }
 
-const createEvent = async (hostId: string, eventData: CreateEventRequest, currencyCode: string) => {
-    const host = await authRepository.findUserById(parseInt(hostId));
+const createEvent = async (hostId: number, eventData: CreateEventRequest, currencyCode: string) => {
+    const host = await authRepository.findUserById(hostId);
     if (!host?.stripe_account_id || host?.stripe_payout_enabled === false) {
         throw new Error("STRIPE_ACCOUNT_NOT_FOUND");
     }
@@ -113,15 +114,22 @@ const createEvent = async (hostId: string, eventData: CreateEventRequest, curren
         eventData.title.length > 100 ||
         eventData.description.length < 10 ||
         eventData.description.length > 2000 ||
+        eventData.address.length < 1 ||
+        eventData.address.length > 255 ||
         isNaN(new Date(eventData.start_date).getTime()) ||
         isNaN(new Date(eventData.end_date).getTime()) ||
         new Date(eventData.start_date) < new Date() ||
-        new Date(eventData.end_date) <= new Date(eventData.start_date)
+        new Date(eventData.end_date) <= new Date(eventData.start_date) ||
+        eventData.latitude < -90 ||
+        eventData.latitude > 90 ||
+        eventData.longitude < -180 ||
+        eventData.longitude > 180 ||
+        !validateCloudinaryImageUrls(eventData.images)
     ) {
         throw new Error("INVALID_EVENT_DATA");
     }
 
-    const newEvent = await eventRepository.createEvent(parseInt(hostId), eventData);
+    const newEvent = await eventRepository.createEvent(hostId, eventData);
     return newEvent
 }
 
@@ -153,10 +161,17 @@ const updateEvent = async (hostId: number, slug: string, data: UpdateEventReques
         data.title.length > 100 ||
         data.description.length < 10 ||
         data.description.length > 2000 ||
+        data.address.length < 1 ||
+        data.address.length > 255 ||
         isNaN(new Date(data.start_date).getTime()) ||
         isNaN(new Date(data.end_date).getTime()) ||
         new Date(data.start_date) < new Date() ||
-        new Date(data.end_date) <= new Date(data.start_date)
+        new Date(data.end_date) <= new Date(data.start_date) ||
+        data.latitude < -90 ||
+        data.latitude > 90 ||
+        data.longitude < -180 ||
+        data.longitude > 180 ||
+        (data.images !== undefined && !validateCloudinaryImageUrls(data.images))
     ) {
         throw new Error("INVALID_EVENT_DATA");
     }
@@ -195,8 +210,8 @@ const closeEvent = async (hostId: number, slug: string) => {
     await eventRepository.updateEventStatus(event.id, EventStatus.CLOSED);
 }
 
-const findEventsByHostId = async (hostId: string, page: number, limit: number, status: EventStatus | undefined, search: string | undefined) => {
-    const { events, total } = await eventRepository.getEventsByHostId(parseInt(hostId), page, limit, status, search);
+const findEventsByHostId = async (hostId: number, page: number, limit: number, status: EventStatus | undefined, search: string | undefined) => {
+    const { events, total } = await eventRepository.getEventsByHostId(hostId, page, limit, status, search);
     const totalPages = Math.ceil(total / limit);
     const formattedEvents = events.map(event => {
         const locked_count = event.booths.filter(b => b.type === BoothType.LOCKED).length;

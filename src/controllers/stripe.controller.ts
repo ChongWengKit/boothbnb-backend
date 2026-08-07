@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import Stripe from 'stripe';
+import { parseUserId } from '../lib/validation.js';
 import { stripeService } from '../services/stripe.service.js';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: '2026-03-25.dahlia',
@@ -10,7 +11,11 @@ export const createStripeConnectAccount = async (req: Request, res: Response) =>
         if (!req.user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
-        const accountLinkUrl = await stripeService.createStripeConnectAccount(parseInt(req.user.id));
+        const userId = parseUserId(req.user.id);
+        if (userId === null) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID.' });
+        }
+        const accountLinkUrl = await stripeService.createStripeConnectAccount(userId);
         return res.status(200).json({ success: true, url: accountLinkUrl });
     } catch (error:any) {
         if(error.message === 'USER_NOT_FOUND') return res.status(404).json({ success: false, message: 'User not found.' });
@@ -24,7 +29,11 @@ export const checkStripeStatus = async (req: Request, res: Response) => {
         if (!req.user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
-        const result = await stripeService.checkStripeStatus(parseInt(req.user.id));
+        const userId = parseUserId(req.user.id);
+        if (userId === null) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID.' });
+        }
+        const result = await stripeService.checkStripeStatus(userId);
         const { hasAccountId, payoutsEnabled, user } = result;
         return res.json({ hasAccountId, payoutsEnabled, accountId: user.stripe_account_id });
     } catch (error) {

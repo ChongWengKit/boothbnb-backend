@@ -6,6 +6,7 @@ import Stripe from 'stripe';
 import jwt from 'jsonwebtoken';
 import { User } from '../types/types.js'
 import { eventService } from '../services/event.service.js';
+import { parseUserId } from '../lib/validation.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: '2026-03-25.dahlia',
@@ -30,6 +31,9 @@ export const searchEvents = async (req: Request, res: Response<ApiResponse<Searc
             page: typeof page === 'string' ? parseInt(page) : 1,
             limit: typeof limit === 'string' ? parseInt(limit) : 12,
         };
+        if (searchRequest.page! < 1 || searchRequest.limit! < 1 || searchRequest.limit! > 100) {
+            return res.status(400).json({ success: false, message: 'Invalid pagination parameters.' });
+        }
         const result = await eventService.getEventsBySearchRequest(searchRequest);
         const { formattedEvents, total, totalPages } = result;
         return res.status(200).json({
@@ -56,7 +60,10 @@ export const createEvent = async (req: Request<{}, {}, CreateEventRequest>, res:
         if (!req.user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
-        const hostId = req.user.id;
+        const hostId = parseUserId(req.user.id);
+        if (hostId === null) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID.' });
+        }
         if (req.user.role !== Role.HOST) {
             return res.status(403).json({ success: false, message: 'Forbidden. Only hosts can create events.' });
         }
@@ -68,7 +75,16 @@ export const createEvent = async (req: Request<{}, {}, CreateEventRequest>, res:
             data: newEvent
         });
 
-    } catch (error) {
+    } catch (error: any) {
+        if (error.message === 'INVALID_EVENT_DATA') {
+            return res.status(400).json({ success: false, message: 'Invalid event data' });
+        }
+        if (error.message === 'STRIPE_ACCOUNT_NOT_FOUND') {
+            return res.status(400).json({ success: false, message: 'Stripe account not found' });
+        }
+        if (error.message === 'CURRENCY_NOT_FOUND') {
+            return res.status(400).json({ success: false, message: 'Currency not found' });
+        }
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
@@ -80,7 +96,10 @@ export const updateEvent = async (req: Request<{ slug: string }, {}, UpdateEvent
         if (!req.user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
-        const hostId = parseInt(req.user.id);
+        const hostId = parseUserId(req.user.id);
+        if (hostId === null) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID.' });
+        }
 
         if (req.user.role !== Role.HOST) {
             return res.status(403).json({ success: false, message: 'Forbidden. Only hosts can update events.' });
@@ -98,7 +117,7 @@ export const updateEvent = async (req: Request<{ slug: string }, {}, UpdateEvent
         if (error.message === 'EVENT_NOT_OWNED_BY_HOST') {
             return res.status(403).json({ success: false, message: 'Forbidden. You do not own this event.' });
         }
-        if (error.meesage === 'INVALID_EVENT_DATA') {
+        if (error.message === 'INVALID_EVENT_DATA') {
             return res.status(400).json({ success: false, message: 'Invalid event data' });
         }
         return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -111,7 +130,10 @@ export const publishEvent = async (req: Request<{ slug: string }>, res: Response
         if (!req.user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
-        const hostId = parseInt(req.user.id);
+        const hostId = parseUserId(req.user.id);
+        if (hostId === null) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID.' });
+        }
 
         await eventService.publishEvent(hostId, slug);
 
@@ -136,7 +158,10 @@ export const closeEvent = async (req: Request<{ slug: string }>, res: Response<A
         if (!req.user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
-        const hostId = parseInt(req.user.id);
+        const hostId = parseUserId(req.user.id);
+        if (hostId === null) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID.' });
+        }
 
         await eventService.closeEvent(hostId, slug);
 
@@ -158,7 +183,10 @@ export const findEventsByHostId = async (req: Request, res: Response<ApiResponse
         if (!req.user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
-        const user_id = req.user.id;
+        const user_id = parseUserId(req.user.id);
+        if (user_id === null) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID.' });
+        }
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
         const status = req.query.status as EventStatus | undefined;
@@ -166,6 +194,9 @@ export const findEventsByHostId = async (req: Request, res: Response<ApiResponse
 
         if (req.user.role !== Role.HOST) {
             return res.status(403).json({ success: false, message: 'Forbidden. Only hosts can access this resource.' });
+        }
+        if (page < 1 || limit < 1 || limit > 100) {
+            return res.status(400).json({ success: false, message: 'Invalid pagination parameters.' });
         }
 
         const result = await eventService.findEventsByHostId(user_id, page, limit, status, search);
@@ -201,7 +232,11 @@ export const getEventBySlug = async (
         }
         let userId: number | undefined;
         if (req.user) {
-            userId = Number(req.user.id);
+            const parsedUserId = parseUserId(req.user.id);
+            if (parsedUserId === null) {
+                return res.status(400).json({ success: false, message: 'Invalid user ID.' });
+            }
+            userId = parsedUserId;
         } else {
             const authHeader = req.headers.authorization;
             if (authHeader?.startsWith('bearer ')) {
@@ -210,9 +245,11 @@ export const getEventBySlug = async (
                     const secret = process.env.JWT_SECRET;
                     if (secret) {
                         if (token) {
-                            const decoded = jwt.verify(token, process.env.JWT_SECRET!) as unknown as User; userId = Number(decoded.id);
-                            userId = Number(decoded.id);
-
+                            const decoded = jwt.verify(token, process.env.JWT_SECRET!) as unknown as User;
+                            const parsedUserId = parseUserId(decoded.id);
+                            if (parsedUserId !== null) {
+                                userId = parsedUserId;
+                            }
                         }
                     }
                 } catch (e) {
@@ -249,9 +286,13 @@ export const getEventDetailsBySlug = async (
         if (!req.user || req.user.role !== Role.HOST) {
             return res.status(403).json({ success: false, message: 'Forbidden' });
         }
+        const userId = parseUserId(req.user.id);
+        if (userId === null) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID.' });
+        }
         const eventData = await eventService.getHostEventDetails(
             slug,
-            parseInt(req.user.id),
+            userId,
             currencyCode
         );
         return res.status(200).json({
@@ -283,9 +324,14 @@ export const getEventEditBySlug = async (
             return res.status(400).json({ success: false, message: 'Invalid request' });
         }
 
+        const userId = parseUserId(req.user.id);
+        if (userId === null) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID.' });
+        }
+
         const eventData = await eventService.getHostEditEvent(
             slug,
-            parseInt(req.user.id),
+            userId,
             currencyCode
         );
 
@@ -313,13 +359,24 @@ export const checkoutByUpdateEventReserved = async (
 
         if (!req.user) return res.status(404).json({ success: false, message: 'User not found' });
 
+        const userId = parseUserId(req.user.id);
+        if (userId === null) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID.' });
+        }
+
+        const parsedEventId = parseInt(eventId);
+        const parsedBoothId = parseInt(boothId);
+        if (!eventId || !boothId || isNaN(parsedEventId) || isNaN(parsedBoothId)) {
+            return res.status(400).json({ success: false, message: 'Invalid event or booth ID.' });
+        }
+
         const sessionUrl = await eventService.createBoothCheckoutSession(
-            parseInt(req.user.id),
+            userId,
             req.user.email,
             req.user.username,
             req.user.role,
-            parseInt(eventId),
-            parseInt(boothId),
+            parsedEventId,
+            parsedBoothId,
             currency
         );
 

@@ -3,14 +3,20 @@ import { ApiResponse } from '../types/types.js';
 import { Role } from '@prisma/client';
 import { bookingService } from '../services/booking.service.js';
 import { eventRepository } from '../repository/event.repository.js';
+import { parsePageLimit, parseUserId, validatePagination } from '../lib/validation.js';
 export const getUserBookings = async (req: Request, res: Response<ApiResponse<any>>) => {
     try {
         if (!req.user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
-        const userId = parseInt(req.user.id);
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 10;
+        const userId = parseUserId(req.user.id);
+        if (userId === null) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID.' });
+        }
+        const { page, limit } = parsePageLimit(req.query.page, req.query.limit);
+        if (!validatePagination(page, limit)) {
+            return res.status(400).json({ success: false, message: 'Invalid pagination parameters.' });
+        }
         const result = await bookingService.getUserBookings(userId, page, limit);
 
         const { bookings, total, totalPages } = result;
@@ -39,9 +45,14 @@ export const getUserPaidBookings = async (req: Request, res: Response<ApiRespons
         if (!req.user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
-        const userId = parseInt(req.user.id);
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 10;
+        const userId = parseUserId(req.user.id);
+        if (userId === null) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID.' });
+        }
+        const { page, limit } = parsePageLimit(req.query.page, req.query.limit);
+        if (!validatePagination(page, limit)) {
+            return res.status(400).json({ success: false, message: 'Invalid pagination parameters.' });
+        }
 
         const result = await bookingService.getUserPaidBookings(userId, page, limit);
         const { bookings, total, totalPages } = result;
@@ -67,10 +78,16 @@ export const getUserPaidBookings = async (req: Request, res: Response<ApiRespons
 export const getBookingById = async (req: Request<{ id: string }>, res: Response<ApiResponse<any>>) => {
     try {
         const bookingId = parseInt(req.params.id);
+        if (Number.isNaN(bookingId)) {
+            return res.status(400).json({ success: false, message: 'Invalid booking ID.' });
+        }
         if (!req.user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
-        const userId = parseInt(req.user.id);
+        const userId = parseUserId(req.user.id);
+        if (userId === null) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID.' });
+        }
 
         const booking = await eventRepository.getBookingById(bookingId);
 

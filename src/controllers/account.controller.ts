@@ -2,14 +2,20 @@ import { Request, Response } from 'express';
 import { ApiResponse, EventStatus, Role } from '../types/types.js';
 import { accountService } from '../services/account.service.js';
 import { eventService } from '../services/event.service.js';
+import { isValidUsername, parsePageLimit, parseUserId, validatePagination } from '../lib/validation.js';
 export const getAccount = async (req: Request, res: Response<ApiResponse<any>>) => {
     try {
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 10;
+        const { page, limit } = parsePageLimit(req.query.page, req.query.limit);
+        if (!validatePagination(page, limit)) {
+            return res.status(400).json({ success: false, message: 'Invalid pagination parameters.' });
+        }
         if (!req.user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
         const username = req.params.username as string;
+        if (!isValidUsername(username)) {
+            return res.status(400).json({ success: false, message: 'Invalid username.' });
+        }
         const result = await eventService.getUserEvents(username, page, limit);
         const accountData = {
             ...result.user,
@@ -32,9 +38,14 @@ export const getAccount = async (req: Request, res: Response<ApiResponse<any>>) 
 
 export const getPublicAccount = async (req: Request, res: Response<ApiResponse<any>>) => {
     try {
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 12;
+        const { page, limit } = parsePageLimit(req.query.page, req.query.limit, 1, 12);
+        if (!validatePagination(page, limit)) {
+            return res.status(400).json({ success: false, message: 'Invalid pagination parameters.' });
+        }
         const username = req.params.username as string;
+        if (!isValidUsername(username)) {
+            return res.status(400).json({ success: false, message: 'Invalid username.' });
+        }
         const result = await eventService.getUserEvents(username, page, limit);
         const accountData = {
             ...result.user,
@@ -65,7 +76,10 @@ export const updateProfilePhoto = async (req: Request, res: Response<ApiResponse
             return res.status(400).json({ success: false, message: 'Photo URL is required.' });
         }
 
-        const userId = parseInt(req.user.id);
+        const userId = parseUserId(req.user.id);
+        if (userId === null) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID.' });
+        }
         await accountService.updateProfilePhoto(userId, profile_photo);
         return res.status(200).json({
             success: true,
