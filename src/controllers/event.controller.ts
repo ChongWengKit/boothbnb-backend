@@ -383,6 +383,8 @@ export const checkoutByUpdateEventReserved = async (
         return res.status(200).json({ success: true, message: 'Booth reserved', data: sessionUrl });
     } catch (error: any) {
         if (error.message === 'EVENT_NOT_FOUND') return res.status(404).json({ success: false, message: 'Event not found' });
+        if (error.message === 'EVENT_NOT_AVAILABLE') return res.status(400).json({ success: false, message: 'Event is not available for booking.' });
+        if (error.message === 'EVENT_EXPIRED') return res.status(400).json({ success: false, message: 'This event has already ended.' });
         if (error.message === 'BOOTH_UNAVAILABLE') return res.status(400).json({ success: false, message: 'Booth is not available' });
         if (error.message === 'HOST_STRIPE_NOT_CONNECTED') return res.status(400).json({ success: false, message: 'This event host has not connected their Stripe account yet.' });
         if (error.message === 'CURRENCY_NOT_SUPPORTED') return res.status(400).json({ success: false, message: 'Currency not supported.' });

@@ -348,6 +348,8 @@ const getHostEditEvent = async (slug: string | string[], userId: number, currenc
 const createBoothCheckoutSession = async (vendorId: number, email: string, username: string, role: string, eventId: number, boothId: number, currencyCode: string) => {
     const event = await eventRepository.getEventById(eventId);
     if (!event) throw new Error('EVENT_NOT_FOUND');
+    if (event.status !== EventStatus.PUBLISHED) throw new Error('EVENT_NOT_AVAILABLE');
+    if (event.end_date && new Date(event.end_date) <= new Date()) throw new Error('EVENT_EXPIRED');
 
     const host = await authRepository.findUserById(event.host_id);
     if (!host?.stripe_account_id || host.stripe_payout_enabled === false) {

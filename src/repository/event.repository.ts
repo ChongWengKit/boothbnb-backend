@@ -423,6 +423,7 @@ const getEventById = async (id: number) => {
     },
   });
 };
+
 const getEventsByHostId = async (hostId: number, page: number = 1, limit: number = 20, status?: EventStatus, search?: string) => {
   const skip = (page - 1) * limit;
   const where: Prisma.eventsWhereInput = {
