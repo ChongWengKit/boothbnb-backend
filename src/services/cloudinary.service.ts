@@ -12,7 +12,7 @@ const generateCloudinarySignatureAction = async (timestamp: number, folder: stri
     });
 
     const signature = cloudinary.utils.api_sign_request(
-        { paramsToSign: { timestamp, folder }, folder: CLOUDINARY_UPLOAD_FOLDER },
+        { timestamp, folder },
         CLOUDINARY_API_SECRET,
     );
     return signature;
