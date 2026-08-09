@@ -42,7 +42,7 @@ export const checkStripeStatus = async (req: Request, res: Response) => {
 };
 
 export const handleStripeWebhook = async (req: Request, res: Response) => {
-    const payload = ((req as any).rawBody as Buffer).toString();
+    const payload = (req as any).rawBody as Buffer;
     const sig = req.headers['stripe-signature'];
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
     if (!sig || !endpointSecret) {

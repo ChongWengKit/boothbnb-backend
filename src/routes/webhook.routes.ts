@@ -7,15 +7,10 @@ import { resendWebhookSchema } from '../lib/schemas/mail.schema.js';
 
 const router = Router();
 
-router.post(
-    '/stripe',
-    express.raw({ type: 'application/json' }), 
-    handleStripeWebhook
-);
+router.post('/stripe', handleStripeWebhook);
 
 router.post(
     '/resend',
-    express.raw({ type: 'application/json' }),
     verifyResendWebhook,
     validate({ body: resendWebhookSchema }),
     handleResendWebhook

@@ -72,10 +72,10 @@ const limiter = rateLimit({
     legacyHeaders: false,
 });
 app.use(limiter);
-app.use(express.json());
 
-app.use('/webhook', 
-  express.raw({ type: 'application/json' }), 
+app.use(
+  '/webhook',
+  express.raw({ type: 'application/json' }),
   (req, res, next) => {
     (req as any).rawBody = req.body;
     next();
@@ -83,6 +83,7 @@ app.use('/webhook',
   webhookRoutes
 );
 
+app.use(express.json());
 app.use('/auth', authRoutes);
 app.use('/event', eventRoutes);
 app.use('/host', hostRoutes);
