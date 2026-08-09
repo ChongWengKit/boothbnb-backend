@@ -1,16 +1,11 @@
 import { Request, Response } from 'express';
 import { ApiResponse } from '../types/types.js';
 import { UpdateAdminRequestParams } from '../types/types.js';
-import { ActionType, AdminRequestStatus, Role } from '../types/types.js';
+import { ActionType, AdminRequestStatus } from '../types/types.js';
 import { adminService } from '../services/admin.service.js';
-import { isValidEmail, isValidAdminRequestStatus, parsePageLimit, validatePagination } from '../lib/validation.js';
 export const registerAdmin = async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
-
-    if (!isValidEmail(email)) {
-      return res.status(400).json({ success: false, message: 'Valid email is required.' });
-    }
 
     await adminService.registerAdmin(email);
 
@@ -23,14 +18,10 @@ export const registerAdmin = async (req: Request, res: Response) => {
   }
 };
 
-export const updateAdminApproval = async (req: Request<UpdateAdminRequestParams>, res: Response<ApiResponse<any>>) => {
+export const updateAdminApproval = async (req: Request<{}, {}, UpdateAdminRequestParams>, res: Response<ApiResponse<any>>) => {
   try {
-    const { id, status } = req.body;
-    console.log(id,status)
-    if (!id || typeof id !== 'number' || !Number.isInteger(id) || !isValidAdminRequestStatus(status)) {
-      return res.status(400).json({ success: false, message: 'Invalid parameters.' });
-    }
-    await adminService.processAdminApproval(id, status);
+    const { id, status } = req.body as unknown as UpdateAdminRequestParams;
+    await adminService.processAdminApproval(id, status as AdminRequestStatus);
     return res.status(200).json({
       success: true,
       message: 'Request updated successfully.',
@@ -45,12 +36,14 @@ export const updateAdminApproval = async (req: Request<UpdateAdminRequestParams>
 
 export const getApprovalRequests = async (req: Request<{}>, res: Response<ApiResponse<any>>) => {
   try {
-    const { page, limit, action_type, search, status } = req.query;
-    const pagination = parsePageLimit(page, limit);
-    if (!validatePagination(pagination.page, pagination.limit)) {
-      return res.status(400).json({ success: false, message: 'Invalid pagination parameters.' });
-    }
-    const requests = await adminService.getAdminRequests(pagination.page, pagination.limit, action_type as ActionType, search as string, status as AdminRequestStatus);
+    const { page, limit, action_type, search, status } = req.query as unknown as {
+      page: number;
+      limit: number;
+      action_type?: ActionType;
+      search?: string;
+      status?: AdminRequestStatus;
+    };
+    const requests = await adminService.getAdminRequests(page, limit, action_type as ActionType, search as string, status as AdminRequestStatus);
     return res.status(200).json({
       success: true,
       message: 'Approval requests retrieved successfully.',

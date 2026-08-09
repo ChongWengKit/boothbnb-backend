@@ -10,9 +10,7 @@ export interface CloudinarySignatureParams {
 export const generateCloudinarySignatureAction = async (req: Request<{}, {}, CloudinarySignatureParams>, res: Response<ApiResponse<CloudinarySignatureResponse>>) => {
   try {
     const paramsToSign = req.body;
-    if (!paramsToSign.timestamp || !paramsToSign.folder) {
-      return res.status(400).json({ success: false, message: 'Invalid parameters' });
-    }
+
     const signature = await cloudinaryService.generateCloudinarySignatureAction(paramsToSign.timestamp, paramsToSign.folder);
     return res.status(200).json({
       success: true,

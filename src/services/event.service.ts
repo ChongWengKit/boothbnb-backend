@@ -6,7 +6,6 @@ import { authRepository } from '../repository/auth.repository.js';
 import { currencyRepository } from '../repository/currency.repository.js';
 import { CreateEventRequest } from '../types/types.js';
 import { bookmarkRepository } from '../repository/bookmark.repository.js';
-import { validateCloudinaryImageUrls } from '../lib/validation.js';
 import { PaymentStatus } from '@prisma/client';
 import Stripe from 'stripe';
 
@@ -25,7 +24,6 @@ const getUserEvents = async (username: string, page: number, limit: number) => {
     if (user.role === Role.HOST) {
         const { events, total } = await eventRepository.getEventsByHostId(user.id, page, limit);
         const totalPages = Math.ceil(total / limit);
-
         eventsData = events.map(event => {
             const locked_count = event.booths.filter(b => b.type === BoothType.LOCKED).length;
             const total_bookings = event.booths.filter(b => b.type === BoothType.RESERVED || b.type === BoothType.SOLD).length;
@@ -100,35 +98,6 @@ const createEvent = async (hostId: number, eventData: CreateEventRequest, curren
     }
     eventData.currency_code = currencyCode.toUpperCase();
 
-    if (
-        !eventData.title ||
-        !eventData.start_date ||
-        !eventData.end_date ||
-        !eventData.category ||
-        !eventData.currency_code ||
-        !eventData.longitude ||
-        !eventData.latitude ||
-        !eventData.address ||
-        !eventData.description ||
-        eventData.title.length < 3 ||
-        eventData.title.length > 100 ||
-        eventData.description.length < 10 ||
-        eventData.description.length > 2000 ||
-        eventData.address.length < 1 ||
-        eventData.address.length > 255 ||
-        isNaN(new Date(eventData.start_date).getTime()) ||
-        isNaN(new Date(eventData.end_date).getTime()) ||
-        new Date(eventData.start_date) < new Date() ||
-        new Date(eventData.end_date) <= new Date(eventData.start_date) ||
-        eventData.latitude < -90 ||
-        eventData.latitude > 90 ||
-        eventData.longitude < -180 ||
-        eventData.longitude > 180 ||
-        !validateCloudinaryImageUrls(eventData.images)
-    ) {
-        throw new Error("INVALID_EVENT_DATA");
-    }
-
     const newEvent = await eventRepository.createEvent(hostId, eventData);
     return newEvent
 }
@@ -146,34 +115,6 @@ const updateEvent = async (hostId: number, slug: string, data: UpdateEventReques
     data.currency_code = currency.toUpperCase();
     if (event.host_id !== hostId) {
         throw new Error('EVENT_NOT_OWNED_BY_HOST');
-    }
-    if (
-        !data.title ||
-        !data.start_date ||
-        !data.end_date ||
-        !data.category ||
-        !data.longitude ||
-        !data.currency_code ||
-        !data.latitude ||
-        !data.address ||
-        !data.description ||
-        data.title.length < 3 ||
-        data.title.length > 100 ||
-        data.description.length < 10 ||
-        data.description.length > 2000 ||
-        data.address.length < 1 ||
-        data.address.length > 255 ||
-        isNaN(new Date(data.start_date).getTime()) ||
-        isNaN(new Date(data.end_date).getTime()) ||
-        new Date(data.start_date) < new Date() ||
-        new Date(data.end_date) <= new Date(data.start_date) ||
-        data.latitude < -90 ||
-        data.latitude > 90 ||
-        data.longitude < -180 ||
-        data.longitude > 180 ||
-        (data.images !== undefined && !validateCloudinaryImageUrls(data.images))
-    ) {
-        throw new Error("INVALID_EVENT_DATA");
     }
     await eventRepository.updateEvent(event.id, data);
 }

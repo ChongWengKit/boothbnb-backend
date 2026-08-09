@@ -32,7 +32,6 @@ const findAdminRequestById = async (id: number) => {
 
 const processAdminApproval = async (id: number, status: AdminRequestStatus) => {
     const request = await adminRepository.findAdminRequestById(id);
-    console.log(request)
     if (!request) throw new Error("REQUEST_NOT_FOUND");
 
     if (request.action_type === ActionType.HOST_APPROVAL) {

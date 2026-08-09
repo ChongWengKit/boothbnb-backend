@@ -1,15 +1,10 @@
 import { Request, Response } from 'express';
 import { currencyRepository } from '../repository/currency.repository.js';
 import { ApiResponse } from '../types/types.js';
-import { parsePageLimit, validatePagination } from '../lib/validation.js';
 
 export const getCurrency = async (req: Request, res: Response<ApiResponse<any>>) => {
   try {
-    const { currencyCode } = req.query;
-
-    if (!currencyCode || typeof currencyCode !== 'string') {
-      return res.status(400).json({ success: false, message: 'currencyCode query parameter is required.' });
-    }
+    const { currencyCode } = req.query as { currencyCode: string };
 
     const rate = await currencyRepository.getCurrencyRate(currencyCode.toUpperCase());
     if (!rate) {
@@ -24,10 +19,7 @@ export const getCurrency = async (req: Request, res: Response<ApiResponse<any>>)
 
 export const getAllCurrencyDetails = async (req: Request, res: Response<ApiResponse<any>>) => {
   try {
-    const { page, limit } = parsePageLimit(req.query.page, req.query.limit);
-    if (!validatePagination(page, limit)) {
-      return res.status(400).json({ success: false, message: 'Invalid pagination parameters.' });
-    }
+    const { page, limit } = req.query as unknown as { page: number; limit: number };
     const search = req.query.search as string | undefined;
     const status = req.query.status === 'true' ? true : req.query.status === 'false' ? false : undefined;
     const { data, meta } = await currencyRepository.getAllCurrencies(page, limit, search, status);
@@ -45,10 +37,6 @@ export const getAllCurrencyDetails = async (req: Request, res: Response<ApiRespo
 export const updateStatus = async (req: Request, res: Response<ApiResponse<any>>) => {
   try {
     const { currency, is_enabled } = req.body;
-
-    if (!currency || typeof is_enabled !== 'boolean') {
-      return res.status(400).json({ success: false, message: 'Currency and is_enabled status are required.' });
-    }
 
     const updated = await currencyRepository.updateCurrencyStatus(currency.toUpperCase(), is_enabled);
     return res.status(200).json({ 

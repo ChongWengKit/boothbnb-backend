@@ -21,8 +21,19 @@ import './job/emailRetry.job.js';
 import './job/emailSync.job.js';
 import './job/currencyRate.job.js';
 dotenv.config();
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import swaggerUi from 'swagger-ui-express';
-import swaggerFile from './swagger-output.json' with { type: 'json' };
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const swaggerPath = path.join(__dirname, 'swagger-output.json');
+
+const swaggerFile = fs.existsSync(swaggerPath)
+  ? (JSON.parse(await fs.promises.readFile(swaggerPath, 'utf8')) as Record<string, unknown>)
+  : (await import('./swagger-generator.js')).createSwaggerDocument();
+
 const app = express();
 const port = process.env.PORT || 3001;
 const allowedOrigins = [

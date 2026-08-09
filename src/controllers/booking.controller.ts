@@ -3,7 +3,8 @@ import { ApiResponse } from '../types/types.js';
 import { Role } from '@prisma/client';
 import { bookingService } from '../services/booking.service.js';
 import { eventRepository } from '../repository/event.repository.js';
-import { parsePageLimit, parseUserId, validatePagination } from '../lib/validation.js';
+import { parseUserId } from '../lib/validation.js';
+
 export const getUserBookings = async (req: Request, res: Response<ApiResponse<any>>) => {
     try {
         if (!req.user) {
@@ -13,10 +14,7 @@ export const getUserBookings = async (req: Request, res: Response<ApiResponse<an
         if (userId === null) {
             return res.status(400).json({ success: false, message: 'Invalid user ID.' });
         }
-        const { page, limit } = parsePageLimit(req.query.page, req.query.limit);
-        if (!validatePagination(page, limit)) {
-            return res.status(400).json({ success: false, message: 'Invalid pagination parameters.' });
-        }
+        const { page, limit } = req.query as unknown as { page: number; limit: number };
         const result = await bookingService.getUserBookings(userId, page, limit);
 
         const { bookings, total, totalPages } = result;
@@ -35,7 +33,6 @@ export const getUserBookings = async (req: Request, res: Response<ApiResponse<an
             }
         });
     } catch (error) {
-        
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
@@ -49,10 +46,7 @@ export const getUserPaidBookings = async (req: Request, res: Response<ApiRespons
         if (userId === null) {
             return res.status(400).json({ success: false, message: 'Invalid user ID.' });
         }
-        const { page, limit } = parsePageLimit(req.query.page, req.query.limit);
-        if (!validatePagination(page, limit)) {
-            return res.status(400).json({ success: false, message: 'Invalid pagination parameters.' });
-        }
+        const { page, limit } = req.query as unknown as { page: number; limit: number };
 
         const result = await bookingService.getUserPaidBookings(userId, page, limit);
         const { bookings, total, totalPages } = result;
@@ -70,17 +64,15 @@ export const getUserPaidBookings = async (req: Request, res: Response<ApiRespons
             }
         });
     } catch (error) {
-        
+        console.error('Error retrieving user paid bookings:', error);
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
 
 export const getBookingById = async (req: Request<{ id: string }>, res: Response<ApiResponse<any>>) => {
     try {
-        const bookingId = parseInt(req.params.id);
-        if (Number.isNaN(bookingId)) {
-            return res.status(400).json({ success: false, message: 'Invalid booking ID.' });
-        }
+        const { id } = req.params as unknown as { id: number };
+        const bookingId = id;
         if (!req.user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }

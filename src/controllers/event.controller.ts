@@ -187,16 +187,15 @@ export const findEventsByHostId = async (req: Request, res: Response<ApiResponse
         if (user_id === null) {
             return res.status(400).json({ success: false, message: 'Invalid user ID.' });
         }
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 10;
-        const status = req.query.status as EventStatus | undefined;
-        const search = req.query.search as string | undefined;
+        const { page, limit, status, search } = req.query as unknown as {
+            page: number;
+            limit: number;
+            status?: EventStatus;
+            search?: string;
+        };
 
         if (req.user.role !== Role.HOST) {
             return res.status(403).json({ success: false, message: 'Forbidden. Only hosts can access this resource.' });
-        }
-        if (page < 1 || limit < 1 || limit > 100) {
-            return res.status(400).json({ success: false, message: 'Invalid pagination parameters.' });
         }
 
         const result = await eventService.findEventsByHostId(user_id, page, limit, status, search);
@@ -354,7 +353,7 @@ export const checkoutByUpdateEventReserved = async (
     res: Response<ApiResponse<any>>
 ) => {
     try {
-        const { eventId, boothId } = req.body;
+        const { eventId, boothId } = req.body as { eventId: number; boothId: number };
         const currency = (req.headers['currency'] as string || 'USD').toUpperCase();
 
         if (!req.user) return res.status(404).json({ success: false, message: 'User not found' });
@@ -364,19 +363,13 @@ export const checkoutByUpdateEventReserved = async (
             return res.status(400).json({ success: false, message: 'Invalid user ID.' });
         }
 
-        const parsedEventId = parseInt(eventId);
-        const parsedBoothId = parseInt(boothId);
-        if (!eventId || !boothId || isNaN(parsedEventId) || isNaN(parsedBoothId)) {
-            return res.status(400).json({ success: false, message: 'Invalid event or booth ID.' });
-        }
-
         const sessionUrl = await eventService.createBoothCheckoutSession(
             userId,
             req.user.email,
             req.user.username,
             req.user.role,
-            parsedEventId,
-            parsedBoothId,
+            eventId,
+            boothId,
             currency
         );
 

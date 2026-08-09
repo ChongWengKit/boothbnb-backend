@@ -1,21 +1,8 @@
-import swaggerAutogen from 'swagger-autogen';
-const domain = process.env.BACKEND_DOMAIN || 'localhost:3001';
+import fs from 'fs';
+import { createSwaggerDocument } from './swagger-generator.js';
 
-const doc = {
-  info: { title: 'Boothbnb API', description: '' },
-  host: domain,
-  schemes: ['https'],
-  securityDefinitions: {
-    bearerAuth: {
-      type: 'apiKey',
-      name: 'Authorization',
-      scheme: 'bearer',
-      in: 'header',
-    },
-  },
-};
+const outputFile = new URL('./swagger-output.json', import.meta.url);
+const swaggerDoc = createSwaggerDocument();
 
-const outputFile = './swagger-output.json';
-const endpointsFiles = ['./index.js']; 
-
-swaggerAutogen(outputFile, endpointsFiles, doc);
+await fs.promises.writeFile(outputFile, JSON.stringify(swaggerDoc, null, 2));
+console.log(`Swagger document generated at ${outputFile.pathname}`);

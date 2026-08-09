@@ -12,9 +12,6 @@ import { mailService } from '../services/mail.service.js';
 export const googleSignIn = async (req: Request<{ token: string }>, res: Response<ApiResponse<SignInResponse>>) => {
   try {
     const { token } = req.body;
-    if (!token) {
-      return res.status(400).json({ success: false, message: 'Token is required.' });
-    }
 
     const tokenResult = await accountService.verifyGoogleToken(token);
     let result = await accountService.googleSignIn(tokenResult.email);
@@ -56,9 +53,6 @@ export const googleSignIn = async (req: Request<{ token: string }>, res: Respons
 export const googleSignUp = async (req: Request<{ token: string, role: Role }>, res: Response<ApiResponse<SignInResponse>>) => {
   try {
     const { token, role } = req.body;
-    if (!token) {
-      return res.status(400).json({ success: false, message: 'Token is required.' });
-    }
 
     const { email, name, picture } = await accountService.verifyGoogleToken(token);
     const user = await accountService.googleSignUp(email, role, name, picture);
@@ -112,9 +106,6 @@ export const googleSignUp = async (req: Request<{ token: string, role: Role }>, 
 export const resetPassword = async (req: Request<{ password: string, token: string }>, res: Response<ApiResponse<{}>>) => {
   try {
     const { password, token } = req.body;
-    if (!password || !token) {
-      return res.status(400).json({ success: false, message: 'Password and token are required.' });
-    }
 
     await accountService.resetPassword(password, token);
 
@@ -143,10 +134,6 @@ export const adminSignup = async (req: Request, res: Response) => {
   try {
     const { username, password, token } = req.body;
 
-    if (!username || !password || !token) {
-      return res.status(400).json({ success: false, message: 'Missing required fields.' });
-    }
-
     await accountService.adminSignUp(username, password, token);
 
     return res.status(200).json({ success: true, message: 'Admin account set up successfully. You can now log in.' });
@@ -170,10 +157,6 @@ export const adminSignup = async (req: Request, res: Response) => {
 export const signin = async (req: Request<{}, {}, SignInRequest>, res: Response<ApiResponse<SignInResponse>>) => {
   const { email, password } = req.body;
   try {
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Email and password are required.' });
-    }
-
     const user = await accountService.signIn(email, password);
     const token = await authService.createAuthenticationToken(user.id, user.username, user.email, user.role);
 
@@ -211,10 +194,6 @@ export const signup = async (req: Request<{}, {}, SignupRequest>, res: Response<
 
 
   try {
-    if (!email || !username || !password) {
-      return res.status(400).json({ success: false, message: 'Email, username, and password are required.' });
-    }
-
     const result = await accountService.signUp(email, username, password, role);
     const user = result.user;
     const log = result.log;
@@ -272,9 +251,6 @@ export const signup = async (req: Request<{}, {}, SignupRequest>, res: Response<
 export const forgotPassword = async (req: Request<{ email: string }>, res: Response<ApiResponse<{}>>) => {
   try {
     const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email is required.' });
-    }
 
     await accountService.forgotPassword(email);
     return res.status(200).json({ success: true, message: 'Reset password email sent successfully.' });
@@ -289,9 +265,6 @@ export const forgotPassword = async (req: Request<{ email: string }>, res: Respo
 export const verify = async (req: Request, res: Response<ApiResponse<{ authentication_token: string, profile_photo: string | null }>>) => {
   try {
     const { token } = req.body;
-    if (!token) {
-      return res.status(400).json({ success: false, message: 'Token is required.' });
-    }
 
     const result = await accountService.verifyAccount(token);
     const user = result.user;

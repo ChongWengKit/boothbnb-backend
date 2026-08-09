@@ -4,27 +4,24 @@ import { SearchEventResponse } from '../types/types.js';
 import { bookmarkService } from '../services/bookmark.service.js';
 import { bookmarkRepository } from '../repository/bookmark.repository.js';
 import { parseUserId } from '../lib/validation.js';
+
 export const addFavorite = async (req: Request, res: Response<ApiResponse<{}>>) => {
   try {
-    const { eventId } = req.body;
+    const { eventId } = req.body as { eventId: number };
     if (!req.user) {
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
     const userId = parseUserId(req.user.id);
-    if (userId === null || !eventId) {
+    if (userId === null) {
       return res.status(400).json({ success: false, message: 'Invalid Request.' });
     }
-    const parsedEventId = parseInt(eventId);
-    if (isNaN(parsedEventId)) {
-      return res.status(400).json({ success: false, message: 'Invalid event ID.' });
-    }
-    await bookmarkService.addFavoriteBookmark(userId, parsedEventId);
+    await bookmarkService.addFavoriteBookmark(userId, eventId);
 
     return res.status(201).json({
       success: true,
       message: 'Bookmark successfully.',
     });
-  } catch (error:any) {
+  } catch (error: any) {
     if (error.message === 'EVENT_NOT_FOUND') {
       return res.status(404).json({ success: false, message: 'Event not found.' });
     }
@@ -34,25 +31,21 @@ export const addFavorite = async (req: Request, res: Response<ApiResponse<{}>>) 
 
 export const deleteFavorite = async (req: Request, res: Response<ApiResponse<{}>>) => {
   try {
-    const { eventId } = req.body;
+    const { eventId } = req.body as { eventId: number };
     if (!req.user) {
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
     const userId = parseUserId(req.user.id);
-    if (userId === null || !eventId) {
+    if (userId === null) {
       return res.status(400).json({ success: false, message: 'Invalid Request.' });
     }
-    const parsedEventId = parseInt(eventId);
-    if (isNaN(parsedEventId)) {
-      return res.status(400).json({ success: false, message: 'Invalid event ID.' });
-    }
-    await bookmarkService.removeFavoriteBookmark(userId, parsedEventId);
+    await bookmarkService.removeFavoriteBookmark(userId, eventId);
 
     return res.status(200).json({
       success: true,
       message: 'Bookmark successfully deleted.',
     });
-  } catch (error:any) {
+  } catch (error: any) {
     if (error.message === 'BOOKMARK_NOT_FOUND') {
       return res.status(404).json({ success: false, message: 'Bookmark not found.' });
     }
@@ -77,7 +70,6 @@ export const getFavoriteBookmarkId = async (req: Request, res: Response<ApiRespo
       data: bookmarkIds,
     });
   } catch (error) {
-    ;
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }
@@ -88,13 +80,9 @@ export const getFavorite = async (req: Request, res: Response<ApiResponse<Search
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
     const userId = parseUserId(req.user.id);
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const { page, limit } = req.query as unknown as { page: number; limit: number };
     if (userId === null) {
       return res.status(400).json({ success: false, message: 'Invalid Request.' });
-    }
-    if (page < 1 || limit < 1 || limit > 100) {
-      return res.status(400).json({ success: false, message: 'Invalid pagination parameters.' });
     }
     const result = await bookmarkService.getFavoriteBookmarks(userId, page, limit);
 
@@ -113,7 +101,6 @@ export const getFavorite = async (req: Request, res: Response<ApiResponse<Search
       }
     });
   } catch (error) {
-    ;
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }
