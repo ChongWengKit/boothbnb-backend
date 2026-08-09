@@ -17,8 +17,8 @@ export const createStripeConnectAccount = async (req: Request, res: Response) =>
         }
         const accountLinkUrl = await stripeService.createStripeConnectAccount(userId);
         return res.status(200).json({ success: true, url: accountLinkUrl });
-    } catch (error:any) {
-        if(error.message === 'USER_NOT_FOUND') return res.status(404).json({ success: false, message: 'User not found.' });
+    } catch (error: any) {
+        if (error.message === 'USER_NOT_FOUND') return res.status(404).json({ success: false, message: 'User not found.' });
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
@@ -42,6 +42,7 @@ export const checkStripeStatus = async (req: Request, res: Response) => {
 };
 
 export const handleStripeWebhook = async (req: Request, res: Response) => {
+    const payload = ((req as any).rawBody as Buffer).toString();
     const sig = req.headers['stripe-signature'];
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
     if (!sig || !endpointSecret) {
@@ -51,17 +52,17 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
     let event: Stripe.Event;
 
     try {
-        event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+        event = stripe.webhooks.constructEvent(payload, sig, endpointSecret);
 
     } catch (err) {
         return res.status(400).send(`Webhook Error: ${(err as Error).message}`);
     }
     try {
         if (event.type === 'checkout.session.completed') {
-           await stripeService.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+            await stripeService.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
         }
         else if (event.type === 'checkout.session.expired') {
-           await stripeService.handleCheckoutExpired(event.data.object as Stripe.Checkout.Session);
+            await stripeService.handleCheckoutExpired(event.data.object as Stripe.Checkout.Session);
         }
         else if (event.type === 'capability.updated') {
             await stripeService.handleCapabilityUpdated(event.data.object);
