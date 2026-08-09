@@ -1,8 +1,7 @@
 import { z } from 'zod';
 import { isCloudinaryUrl } from './validation.js';
 import { Category, BoothType } from '@prisma/client';
-
-// Reusable validators
+import { paginationQuerySchema } from './schemas/common.schema.js';
 const isValidDateString = (val: string) => !isNaN(new Date(val).getTime());
 
 export const cloudinaryUrlSchema = z
@@ -12,7 +11,6 @@ export const cloudinaryUrlSchema = z
 const boothTypeValues = Object.values(BoothType) as [string, ...string[]];
 const categoryValues = Object.values(Category) as [string, ...string[]];
 
-// Booth schemas
 export const boothSchema = z.object({
   id: z.number().int().positive().optional(),
   name: z.string().min(1).max(100),
@@ -30,7 +28,6 @@ export const boothSchema = z.object({
 
 export const createBoothSchema = boothSchema.omit({ id: true });
 
-// Shared event base schema (all required fields)
 const eventBaseSchema = z.object({
   title: z.string().min(3, 'Title must be between 3 and 100 characters').max(100, 'Title must be between 3 and 100 characters'),
   description: z.string().min(10, 'Description must be between 10 and 2000 characters').max(2000, 'Description must be between 10 and 2000 characters'),
@@ -43,8 +40,6 @@ const eventBaseSchema = z.object({
   images: z.array(cloudinaryUrlSchema).max(5, 'Max 5 images'),
 });
 
-// CreateEvent schema: all fields required, dates validated.
-// currency_code is NOT in the body - it is set from the `currency` header in the controller/service.
 export const createEventSchema = eventBaseSchema.extend({
   booths: z.array(createBoothSchema).min(1, 'At least one booth is required'),
 }).superRefine((data, ctx) => {
@@ -67,8 +62,8 @@ export const createEventSchema = eventBaseSchema.extend({
   }
 });
 
-// UpdateEvent schema: partial, dates only validated if both present.
-// currency_code is NOT in the body - it is set from the `currency` header in the controller/service.
+
+
 export const updateEventSchema = eventBaseSchema.partial().extend({
   booths: z.array(boothSchema).optional(),
 }).superRefine((data, ctx) => {
@@ -85,6 +80,20 @@ export const updateEventSchema = eventBaseSchema.partial().extend({
   }
 });
 
-// Type helpers
+export const searchEventsQuerySchema = paginationQuerySchema.extend({
+  title: z.string().optional(),
+  category: z.string().optional(),
+  latitude: z.coerce.number().optional(),
+  longitude: z.coerce.number().optional(),
+  ne_lat: z.coerce.number().optional(),
+  ne_lng: z.coerce.number().optional(),
+  sw_lat: z.coerce.number().optional(),
+  sw_lng: z.coerce.number().optional(),
+  extent: z.string().optional(),
+  type: z.string().optional(),
+  start_date: z.string().optional(),
+  end_date: z.string().optional(),
+});
+
 export type CreateEventInput = z.input<typeof createEventSchema>;
 export type UpdateEventInput = z.input<typeof updateEventSchema>;

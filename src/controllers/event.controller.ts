@@ -15,21 +15,20 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
 export const searchEvents = async (req: Request, res: Response<ApiResponse<SearchEventResponse>>) => {
     try {
         const { title, longitude, latitude, start_date, end_date, category, page, limit, ne_lat, ne_lng, sw_lat, sw_lng, extent, type } = req.query;
-
         const searchRequest: SearchEventRequest = {
             title: typeof title === 'string' ? title : undefined,
             longitude: typeof longitude === 'string' ? parseFloat(longitude) : undefined,
             latitude: typeof latitude === 'string' ? parseFloat(latitude) : undefined,
-            start_date: typeof start_date === 'string' ? new Date(start_date) : undefined,
-            end_date: typeof end_date === 'string' ? new Date(end_date) : undefined,
+            start_date: typeof start_date === 'string' ? new Date(start_date) : new Date(),
+            end_date: typeof end_date === 'string' ? new Date(end_date) : new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000),
             category: typeof category === 'string' ? category : undefined,
             ne_lat: typeof ne_lat === 'string' ? parseFloat(ne_lat) : undefined,
             ne_lng: typeof ne_lng === 'string' ? parseFloat(ne_lng) : undefined,
             sw_lat: typeof sw_lat === 'string' ? parseFloat(sw_lat) : undefined,
             sw_lng: typeof sw_lng === 'string' ? parseFloat(sw_lng) : undefined,
             type: typeof type === 'string' ? type : undefined,
-            page: typeof page === 'string' ? parseInt(page) : 1,
-            limit: typeof limit === 'string' ? parseInt(limit) : 12,
+            page: typeof page === 'number' ? parseInt(page) : 1,
+            limit: typeof limit === 'number' ? parseInt(limit) : 12,
         };
         if (searchRequest.page! < 1 || searchRequest.limit! < 1 || searchRequest.limit! > 100) {
             return res.status(400).json({ success: false, message: 'Invalid pagination parameters.' });

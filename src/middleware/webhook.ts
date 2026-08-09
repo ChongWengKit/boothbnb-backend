@@ -1,33 +1,25 @@
 import { Request, Response, NextFunction } from 'express';
-import { Webhook } from 'svix';
+import { Resend } from 'resend';
 
-export const verifyResendWebhook = (req: Request, res: Response, next: NextFunction) => {
-    const rawBody = req.body as Buffer | undefined;
-    const signature = req.headers['svix-signature'] as string | undefined;
-    const timestamp = req.headers['svix-timestamp'] as string | undefined;
-    const svixId = req.headers['svix-id'] as string | undefined;
-    const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-    if (!webhookSecret || !signature || !timestamp || !svixId || !rawBody) {
-        return res.status(400).json({ success: false, message: 'Invalid webhook signature or missing headers.' });
-    }
-
+export const verifyResendWebhook = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const webhook = new Webhook(webhookSecret);
-        webhook.verify(rawBody, {
-            'svix-id': svixId,
-            'svix-timestamp': timestamp,
-            'svix-signature': signature,
+        const payload = ((req as any).rawBody as Buffer).toString();
+
+        const result = resend.webhooks.verify({
+            payload,
+            headers: {
+                id: (req.headers['svix-id'] ?? '') as string,
+                timestamp: (req.headers['svix-timestamp'] ?? '') as string,
+                signature: (req.headers['svix-signature'] ?? '') as string,
+            },
+            webhookSecret: (process.env.RESEND_WEBHOOK_SECRET ?? '') as string,
         });
+
+        req.body = result;
+        next();
     } catch (error) {
         return res.status(400).json({ success: false, message: 'Invalid webhook signature.' });
     }
-
-    try {
-        req.body = JSON.parse(rawBody.toString('utf8'));
-    } catch (error) {
-        return res.status(400).json({ success: false, message: 'Invalid webhook payload.' });
-    }
-
-    next();
 };

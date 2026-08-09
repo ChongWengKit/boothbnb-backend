@@ -13,10 +13,11 @@ import { getEventDetailsBySlug } from '../controllers/event.controller.js';
 import { getEventEditBySlug } from '../controllers/event.controller.js';
 import { validate } from '../middleware/validate.js';
 import { createEventSchema, updateEventSchema } from '../lib/event.schema.js';
-import { paginationQuerySchema, slugParamSchema } from '../lib/schemas/common.schema.js';
+import { slugParamSchema } from '../lib/schemas/common.schema.js';
 import { checkoutSchema } from '../lib/schemas/booking.schema.js';
+import { searchEventsQuerySchema } from '../lib/event.schema.js';
 
-router.get('/', validate({ query: paginationQuerySchema }), searchEvents);
+router.get('/', validate({ query: searchEventsQuerySchema }), searchEvents);
 router.get('/:slug', validate({ params: slugParamSchema }), getEventBySlug);
 router.get('/:slug/detail', checkAuthenticationToken, isHost, validate({ params: slugParamSchema }), getEventDetailsBySlug);
 router.get('/:slug/edit', checkAuthenticationToken, isHost, validate({ params: slugParamSchema }), getEventEditBySlug);
