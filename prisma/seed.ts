@@ -198,6 +198,7 @@ const count = await prisma.currency_exchange.count();
     if (!existingEvent) {
       const startDate = new Date(Date.now() + Math.random() * 60 * 24 * 60 * 60 * 1000);
       const endDate = new Date(startDate.getTime() + (Math.random() * 4 + 1) * 24 * 60 * 60 * 1000);
+      const boothCount = Math.floor(Math.random() * 16) + 5;
 
       await prisma.events.create({
         data: {
@@ -213,8 +214,10 @@ const count = await prisma.currency_exchange.count();
           slug: slug,
           start_date: startDate,
           end_date: endDate,
+          total_slots: boothCount,
+          available_slots: boothCount,
           booths: { 
-            create: Array.from({ length: Math.floor(Math.random() * 16) + 5 }).map((_, i) => ({ 
+            create: Array.from({ length: boothCount }).map((_, i) => ({ 
               name: `Booth ${String.fromCharCode(65 + i)}${i + 1}`, 
               type: 'AVAILABLE',
               x: i * 110, 
@@ -361,6 +364,7 @@ const count = await prisma.currency_exchange.count();
       // Recent dates: start dates spread across the next 2-3 months (0-90 days)
       const startDate = new Date(Date.now() + Math.random() * 90 * 24 * 60 * 60 * 1000);
       const endDate = new Date(startDate.getTime() + (Math.random() * 3 + 1) * 24 * 60 * 60 * 1000);
+      const boothCount = Math.floor(Math.random() * 16) + 5;
 
       await prisma.events.create({
         data: {
@@ -376,8 +380,10 @@ const count = await prisma.currency_exchange.count();
           slug: slug,
           start_date: startDate,
           end_date: endDate,
+          total_slots: boothCount,
+          available_slots: boothCount,
           booths: { 
-            create: Array.from({ length: Math.floor(Math.random() * 16) + 5 }).map((_, i) => ({ 
+            create: Array.from({ length: boothCount }).map((_, i) => ({ 
               name: `Booth ${String.fromCharCode(65 + i)}${i + 1}`, 
               type: 'AVAILABLE',
               x: i * 110, 
@@ -394,6 +400,25 @@ const count = await prisma.currency_exchange.count();
       });
     }
   }
+
+  // 4. Fix up any existing events that have total_slots = 0 by counting their booths
+  // (fixes events seeded before the slot counts were populated)
+  const eventsWithZeroSlots = await prisma.events.findMany({
+    where: { total_slots: 0 },
+    include: { _count: { select: { booths: true } } },
+  });
+
+  for (const evt of eventsWithZeroSlots) {
+    await prisma.events.update({
+      where: { id: evt.id },
+      data: {
+        total_slots: evt._count.booths,
+        available_slots: evt._count.booths,
+      },
+    });
+    console.log(`Fixed slots for event: ${evt.title} (${evt._count.booths} booths)`);
+  }
+
   console.log('Seeding completed.');
 }
 
