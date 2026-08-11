@@ -25,9 +25,8 @@ const getUserEvents = async (username: string, page: number, limit: number) => {
         const { events, total } = await eventRepository.getEventsByHostId(user.id, page, limit);
         const totalPages = Math.ceil(total / limit);
         eventsData = events.map(event => {
-            const locked_count = event.booths.filter(b => b.type === BoothType.LOCKED).length;
-            const total_bookings = event.booths.filter(b => b.type === BoothType.RESERVED || b.type === BoothType.SOLD).length;
-            const total_capacity = event._count.booths - locked_count;
+            const total_capacity = event.total_slots;
+            const total_bookings = total_capacity - event.available_slots;
             const thumbnail = event.images[0]?.url || null;
 
             return {
@@ -41,7 +40,7 @@ const getUserEvents = async (username: string, page: number, limit: number) => {
                 thumbnail: thumbnail,
                 total_capacity,
                 total_bookings,
-                available_booths: total_capacity - total_bookings,
+                available_booths: event.available_slots,
             };
         });
 
@@ -62,9 +61,8 @@ const getEventsBySearchRequest = async (searchRequest: SearchEventRequest) => {
     const totalPages = Math.ceil(total / searchRequest.limit!);
 
     const formattedEvents = events.map(event => {
-        const locked_count = event.booths.filter(b => b.type === BoothType.LOCKED).length;
-        const total_bookings = event.booths.filter(b => b.type === BoothType.RESERVED || b.type === BoothType.SOLD).length;
-        const total_capacity = event._count.booths - locked_count;
+        const total_capacity = event.total_slots;
+        const total_bookings = total_capacity - event.available_slots;
         const thumbnail = event.images[0]?.url || null;
         return {
             id: event.id,
@@ -78,7 +76,7 @@ const getEventsBySearchRequest = async (searchRequest: SearchEventRequest) => {
             total_bookings,
             latitude: event.latitude,
             longitude: event.longitude,
-            available_booths: total_capacity - total_bookings,
+            available_booths: event.available_slots,
         };
     });
     return { formattedEvents, total, totalPages };
@@ -155,9 +153,8 @@ const findEventsByHostId = async (hostId: number, page: number, limit: number, s
     const { events, total } = await eventRepository.getEventsByHostId(hostId, page, limit, status, search);
     const totalPages = Math.ceil(total / limit);
     const formattedEvents = events.map(event => {
-        const locked_count = event.booths.filter(b => b.type === BoothType.LOCKED).length;
-        const total_bookings = event.booths.filter(b => b.type === BoothType.RESERVED || b.type === BoothType.SOLD).length;
-        const total_capacity = event._count.booths - locked_count;
+        const total_capacity = event.total_slots;
+        const total_bookings = total_capacity - event.available_slots;
         const thumbnail = event.images[0]?.url || null;
 
         return {
@@ -173,7 +170,7 @@ const findEventsByHostId = async (hostId: number, page: number, limit: number, s
             thumbnail: thumbnail,
             total_capacity,
             total_bookings,
-            available_booths: total_capacity - total_bookings,
+            available_booths: event.available_slots,
         };
     });
     return { formattedEvents, total, totalPages };
@@ -185,9 +182,8 @@ const getEventDetails = async (slug: string | string[], userId?: number, currenc
     if (!event) {
         throw new Error('EVENT_NOT_FOUND');
     }
-    const activeBooths = event.booths.filter(b => b.type !== BoothType.LOCKED);
-    const totalCapacity = activeBooths.length;
-    const availableBooths = activeBooths.filter(b => b.type === BoothType.AVAILABLE).length;
+    const totalCapacity = event.total_slots;
+    const availableBooths = event.available_slots;
 
     let targetRate = 1;
     let baseRate = 1;
@@ -235,9 +231,8 @@ const getHostEventDetails = async (slug: string | string[], userId: number, curr
     const baseRate = eventCurrency ? Number(eventCurrency.rate) : 1;
     const targetRate = Number(targetCurrency.rate);
 
-    const activeBooths = event.booths.filter((b: any) => b.type !== BoothType.LOCKED);
-    const totalCapacity = activeBooths.length;
-    const availableBooths = activeBooths.filter((b: any) => b.type === BoothType.AVAILABLE).length;
+    const totalCapacity = event.total_slots;
+    const availableBooths = event.available_slots;
 
     return {
         ...event,
@@ -267,9 +262,8 @@ const getHostEditEvent = async (slug: string | string[], userId: number, currenc
     const baseRate = eventCurrency ? Number(eventCurrency.rate) : 1;
     const targetRate = Number(targetCurrency.rate);
 
-    const activeBooths = event.booths.filter((b: any) => b.type !== BoothType.LOCKED);
-    const totalCapacity = activeBooths.length;
-    const availableBooths = activeBooths.filter((b: any) => b.type === BoothType.AVAILABLE).length;
+    const totalCapacity = event.total_slots;
+    const availableBooths = event.available_slots;
 
     return {
         ...event,
@@ -307,7 +301,7 @@ const createBoothCheckoutSession = async (vendorId: number, email: string, usern
     const baseRate = eventCurrency ? Number(eventCurrency.rate) : 1;
     const calculatedPrice = (Number(booth.price) / baseRate) * Number(targetCurrency.rate) * 1.05;
 
-    const [bookingRecord] = await eventRepository.createBoothBooking(
+    const bookingRecord = await eventRepository.createBoothBooking(
         vendorId, currencyCode, boothId, booth.name, event.title, calculatedPrice
     );
 

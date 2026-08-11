@@ -26,7 +26,11 @@ export const boothSchema = z.object({
   description: z.string().max(1000).optional(),
 });
 
-export const createBoothSchema = boothSchema.omit({ id: true });
+export const createBoothSchema = boothSchema
+  .omit({ id: true })
+  .extend({
+    type: z.enum(['AVAILABLE', 'LOCKED']),
+  });
 
 const eventBaseSchema = z.object({
   title: z.string().min(3, 'Title must be between 3 and 100 characters').max(100, 'Title must be between 3 and 100 characters'),

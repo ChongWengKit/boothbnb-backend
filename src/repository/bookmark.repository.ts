@@ -34,16 +34,20 @@ const findBookmarkByUserId = async (user_id: number, page: number = 1, limit: nu
       },
       include: {
         event: {
-          include: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            address: true,
+            start_date: true,
+            end_date: true,
+            latitude: true,
+            longitude: true,
+            total_slots: true,
+            available_slots: true,
             images: {
               take: 1,
               select: { url: true }
-            },
-            _count: {
-              select: { booths: true }
-            },
-            booths: {
-              select: { type: true }
             }
           }
         }

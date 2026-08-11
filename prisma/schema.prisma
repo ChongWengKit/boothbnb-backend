@@ -103,14 +103,16 @@ model events {
   currency    currency_exchange @relation(fields: [currency_code], references: [currency])
   start_date  DateTime
   end_date    DateTime
-  status      EventStatus
-  booths      booths[]
-  host        users       @relation(fields: [host_id], references: [id])
-  latitude    Float
-  longitude   Float
-  slug        String
-  images     event_images[]
-  bookmarks  bookmarks[]
+   status      EventStatus
+   total_slots Int @default(0)
+   available_slots Int @default(0)
+   booths      booths[]
+   host        users       @relation(fields: [host_id], references: [id])
+   latitude    Float
+   longitude   Float
+   slug        String
+   images     event_images[]
+   bookmarks  bookmarks[]
   @@index([slug])    
   @@index([status])              
   @@index([host_id])              

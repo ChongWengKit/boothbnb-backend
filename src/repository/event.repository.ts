@@ -13,22 +13,13 @@ type EventSearchResult = Prisma.eventsGetPayload<{
     latitude: true;
     longitude: true;
     slug: true;
+    total_slots: true;
+    available_slots: true;
     images: {
       take: 1;
       select: {
         url: true;
       };
-    };
-    _count: {
-      select: {
-        booths: true;
-      };
-    };
-    booths: {
-      select: {
-        id: true;
-        type: true;
-      }
     };
   };
 }>;
@@ -116,16 +107,11 @@ const getEventsBySearchRequest = async (request: SearchEventRequest) => {
         latitude: true,
         longitude: true,
         slug: true,
+        total_slots: true,
+        available_slots: true,
         images: {
           take: 1,
           select: { url: true },
-        },
-        _count: {
-          select: { booths: true },
-        },
-        booths: {
-          where: { type: { in: [BoothType.RESERVED, BoothType.SOLD, BoothType.LOCKED] as any } },
-          select: { id: true, type: true },
         },
       },
       orderBy: {
@@ -144,6 +130,9 @@ const getEventsBySearchRequest = async (request: SearchEventRequest) => {
 const createEvent = async (hostId: number, data: CreateEventRequest) => {
   const { title, description, address, longitude, latitude, start_date, end_date, category, images, booths } = data;
 
+  const totalSlots = booths.length;
+  const availableSlots = booths.filter(b => b.type === BoothType.AVAILABLE).length;
+
   const event = await prisma.events.create({
     data: {
       title,
@@ -158,6 +147,8 @@ const createEvent = async (hostId: number, data: CreateEventRequest) => {
       host_id: hostId,
       status: EventStatus.DRAFT as any,
       slug: "default",
+      total_slots: totalSlots,
+      available_slots: availableSlots,
       images: {
         create: images?.filter(url => url !== null).map(url => ({ url })) ?? []
       },
@@ -193,9 +184,26 @@ const createEvent = async (hostId: number, data: CreateEventRequest) => {
 };
 
 const createBoothBooking = async (userId: number, currency_code: string, boothId: number, boothName: string, eventName: string, amount: number) => {
-  return await prisma.$transaction([
+  return await prisma.$transaction(async (tx) => {
+    const booth = await tx.booths.findUnique({
+      where: { id: boothId },
+      select: { event_id: true }
+    });
 
-    prisma.booth_bookings.create({
+    if (!booth) {
+      throw new Error('BOOTH_NOT_FOUND');
+    }
+
+    const decrementResult = await tx.events.updateMany({
+      where: { id: booth.event_id, available_slots: { gt: 0 } },
+      data: { available_slots: { decrement: 1 } }
+    });
+
+    if (decrementResult.count === 0) {
+      throw new Error('NO_AVAILABLE_SLOTS');
+    }
+
+    const booking = await tx.booth_bookings.create({
       data: {
         vendor_id: userId,
         booth_id: boothId,
@@ -205,16 +213,19 @@ const createBoothBooking = async (userId: number, currency_code: string, boothId
         booth_name: boothName,
         event_name: eventName
       },
-    }),
-    prisma.booths.update({
+    });
+
+    await tx.booths.update({
       where: { id: boothId, type: BoothType.AVAILABLE },
       data: { type: BoothType.RESERVED as any },
       select: {
         id: true,
         type: true
       }
-    })
-  ]);
+    });
+
+    return booking;
+  });
 };
 
 const getPendingBookingsWithSessions = async () => {
@@ -318,8 +329,8 @@ const confirmBoothBookingWithStatusUpdate = async (
     receiptUrl?: string | undefined;
   }
 ) => {
-  return prisma.$transaction([
-    prisma.booth_bookings.update({
+  return prisma.$transaction(async (tx) => {
+    const booking = await tx.booth_bookings.update({
       where: { id: bookingId, payment_status: PaymentStatus.PENDING },
       data: {
         payment_status: status,
@@ -330,21 +341,42 @@ const confirmBoothBookingWithStatusUpdate = async (
           receiptUrl: paymentDetails.receiptUrl as string | null,
         })
       },
-    }),
-    prisma.booths.updateMany({
+    });
+
+    const boothUpdate = await tx.booths.updateMany({
       where: {
         id: boothId,
         type: BoothType.RESERVED
       },
       data: { type: boothStatus as any },
-    }),
-  ]);
+    });
+
+    if (boothStatus === BoothType.AVAILABLE && boothUpdate.count > 0) {
+      const booth = await tx.booths.findUnique({
+        where: { id: boothId },
+        select: { event_id: true }
+      });
+      if (booth) {
+        await tx.events.update({
+          where: { id: booth.event_id },
+          data: { available_slots: { increment: 1 } }
+        });
+      }
+    }
+
+    return booking;
+  });
 };
 
 const updateEvent = async (id: number, data: UpdateEventRequest) => {
   const { title, currency_code, description, address, longitude, latitude, start_date, end_date, category, images, booths } = data;
 
   const updateData: Prisma.eventsUpdateInput = {};
+
+  if (booths) {
+    updateData.total_slots = booths.length;
+    updateData.available_slots = booths.filter(b => b.type === BoothType.AVAILABLE).length;
+  }
 
   if (description !== undefined) {
     updateData.description = description;
@@ -448,17 +480,12 @@ const getEventsByHostId = async (hostId: number, page: number = 1, limit: number
         status: true,
         slug: true,
         end_date: true,
+        total_slots: true,
+        available_slots: true,
         images: {
           take: 1,
           select: { url: true }
         },
-        _count: {
-          select: { booths: true }
-        },
-        booths: {
-          where: { type: { in: [BoothType.RESERVED, BoothType.SOLD, BoothType.LOCKED] as any } },
-          select: { id: true, type: true }
-        }
       },
       orderBy: { id: 'desc' },
       skip,
@@ -480,17 +507,12 @@ const getEventsByIds = async (ids: number[]) => {
       address: true,
       start_date: true,
       end_date: true,
+      total_slots: true,
+      available_slots: true,
       images: {
         take: 1,
         select: { url: true }
       },
-      _count: {
-        select: { booths: true }
-      },
-      booths: {
-        where: { type: { in: [BoothType.RESERVED, BoothType.SOLD, BoothType.LOCKED] as any } },
-        select: { id: true, type: true }
-      }
     }
   });
 };
@@ -514,6 +536,8 @@ const getEventBySlug = async (slug: string, statuses: EventStatus[] = [EventStat
       end_date: true,
       description: true,
       host_id: true,
+      total_slots: true,
+      available_slots: true,
       host: {
         select: {
           username: true,
@@ -701,12 +725,29 @@ const updateBoothStatus = async (boothId: number, status: BoothType) => {
 };
 
 const confirmUpdateBoothStatus = async (boothId: number, status: BoothType) => {
-  return prisma.booths.updateMany({
-    where: {
-      id: boothId,
-      type: BoothType.RESERVED
-    },
-    data: { type: status as any },
+  return prisma.$transaction(async (tx) => {
+    const boothUpdate = await tx.booths.updateMany({
+      where: {
+        id: boothId,
+        type: BoothType.RESERVED
+      },
+      data: { type: status as any },
+    });
+
+    if (status === BoothType.AVAILABLE && boothUpdate.count > 0) {
+      const booth = await tx.booths.findUnique({
+        where: { id: boothId },
+        select: { event_id: true }
+      });
+      if (booth) {
+        await tx.events.update({
+          where: { id: booth.event_id },
+          data: { available_slots: { increment: 1 } }
+        });
+      }
+    }
+
+    return boothUpdate;
   });
 };
 
