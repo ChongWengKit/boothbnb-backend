@@ -231,6 +231,169 @@ const count = await prisma.currency_exchange.count();
       });
     }
   }
+  // 3. Seed additional events with recent dates (within the last few days to the next few days)
+  const recentLocations = [
+    // ART_CRAFT
+    { name: 'Singapore Art Expo', lat: 1.3521, lng: 103.8198, category: 'ART_CRAFT' },
+    { name: 'Bali Craft Bazaar', lat: -8.3405, lng: 115.0920, category: 'ART_CRAFT' },
+    { name: 'Bangkok Handmade Fair', lat: 13.7563, lng: 100.5018, category: 'ART_CRAFT' },
+    { name: 'Ho Chi Minh Art Market', lat: 10.8231, lng: 106.6297, category: 'ART_CRAFT' },
+    { name: 'Manila Craft Expo', lat: 14.5995, lng: 120.9842, category: 'ART_CRAFT' },
+    { name: 'Taipei Creative Fair', lat: 25.0330, lng: 121.5654, category: 'ART_CRAFT' },
+    { name: 'Seoul Artisan Market', lat: 37.5665, lng: 126.9780, category: 'ART_CRAFT' },
+    { name: 'Sydney Makers Market', lat: -33.8688, lng: 151.2093, category: 'ART_CRAFT' },
+    { name: 'Auckland Craft Show', lat: -36.8485, lng: 174.7633, category: 'ART_CRAFT' },
+    { name: 'Vancouver Art Walk', lat: 49.2827, lng: -123.1207, category: 'ART_CRAFT' },
+
+    // FOOD_BEVERAGE
+    { name: 'Tokyo Ramen Fest', lat: 35.6762, lng: 139.6503, category: 'FOOD_BEVERAGE' },
+    { name: 'Seoul Street Food Expo', lat: 37.5665, lng: 126.9780, category: 'FOOD_BEVERAGE' },
+    { name: 'Hong Kong Dim Sum Fair', lat: 22.3193, lng: 114.1694, category: 'FOOD_BEVERAGE' },
+    { name: 'Taipei Night Market Fest', lat: 25.0330, lng: 121.5654, category: 'FOOD_BEVERAGE' },
+    { name: 'Manila Food Carnival', lat: 14.5995, lng: 120.9842, category: 'FOOD_BEVERAGE' },
+    { name: 'Jakarta Culinary Expo', lat: -6.2088, lng: 106.8456, category: 'FOOD_BEVERAGE' },
+    { name: 'Sydney Seafood Festival', lat: -33.8688, lng: 151.2093, category: 'FOOD_BEVERAGE' },
+    { name: 'Melbourne Coffee Fest', lat: -37.8136, lng: 144.9631, category: 'FOOD_BEVERAGE' },
+    { name: 'Auckland Wine & Dine', lat: -36.8485, lng: 174.7633, category: 'FOOD_BEVERAGE' },
+    { name: 'Vancouver Food Truck Fest', lat: 49.2827, lng: -123.1207, category: 'FOOD_BEVERAGE' },
+
+    // FASHION_BEAUTY
+    { name: 'Seoul Fashion Week', lat: 37.5665, lng: 126.9780, category: 'FASHION_BEAUTY' },
+    { name: 'Bangkok Beauty Expo', lat: 13.7563, lng: 100.5018, category: 'FASHION_BEAUTY' },
+    { name: 'Manila Fashion Fair', lat: 14.5995, lng: 120.9842, category: 'FASHION_BEAUTY' },
+    { name: 'Jakarta Modest Fashion Show', lat: -6.2088, lng: 106.8456, category: 'FASHION_BEAUTY' },
+    { name: 'Sydney Fashion Week', lat: -33.8688, lng: 151.2093, category: 'FASHION_BEAUTY' },
+    { name: 'Melbourne Beauty Expo', lat: -37.8136, lng: 144.9631, category: 'FASHION_BEAUTY' },
+    { name: 'Vancouver Style Show', lat: 49.2827, lng: -123.1207, category: 'FASHION_BEAUTY' },
+    { name: 'Toronto Fashion Fest', lat: 43.6532, lng: -79.3832, category: 'FASHION_BEAUTY' },
+
+    // TECH_GADGETS
+    { name: 'Singapore Tech Week', lat: 1.3521, lng: 103.8198, category: 'TECH_GADGETS' },
+    { name: 'Seoul AI Summit', lat: 37.5665, lng: 126.9780, category: 'TECH_GADGETS' },
+    { name: 'Taipei Tech Expo', lat: 25.0330, lng: 121.5654, category: 'TECH_GADGETS' },
+    { name: 'Bangalore Startup Fest', lat: 12.9716, lng: 77.5946, category: 'TECH_GADGETS' },
+    { name: 'Sydney Innovation Show', lat: -33.8688, lng: 151.2093, category: 'TECH_GADGETS' },
+    { name: 'Vancouver Tech Meetup', lat: 49.2827, lng: -123.1207, category: 'TECH_GADGETS' },
+    { name: 'Toronto AI Conference', lat: 43.6532, lng: -79.3832, category: 'TECH_GADGETS' },
+    { name: 'London Gadget Expo', lat: 51.5074, lng: -0.1278, category: 'TECH_GADGETS' },
+
+    // HOME_LIVING
+    { name: 'Singapore Home Expo', lat: 1.3521, lng: 103.8198, category: 'HOME_LIVING' },
+    { name: 'Bangkok Interior Fair', lat: 13.7563, lng: 100.5018, category: 'HOME_LIVING' },
+    { name: 'Jakarta Living Show', lat: -6.2088, lng: 106.8456, category: 'HOME_LIVING' },
+    { name: 'Sydney Home & Garden', lat: -33.8688, lng: 151.2093, category: 'HOME_LIVING' },
+    { name: 'Melbourne Design Week', lat: -37.8136, lng: 144.9631, category: 'HOME_LIVING' },
+    { name: 'Toronto Home Show', lat: 43.6532, lng: -79.3832, category: 'HOME_LIVING' },
+    { name: 'London Living Fair', lat: 51.5074, lng: -0.1278, category: 'HOME_LIVING' },
+
+    // CORPORATE_TRADE
+    { name: 'Singapore Business Forum', lat: 1.3521, lng: 103.8198, category: 'CORPORATE_TRADE' },
+    { name: 'Hong Kong Trade Expo', lat: 22.3193, lng: 114.1694, category: 'CORPORATE_TRADE' },
+    { name: 'Mumbai Business Summit', lat: 19.0760, lng: 72.8777, category: 'CORPORATE_TRADE' },
+    { name: 'Sydney Trade Fair', lat: -33.8688, lng: 151.2093, category: 'CORPORATE_TRADE' },
+    { name: 'Toronto Business Expo', lat: 43.6532, lng: -79.3832, category: 'CORPORATE_TRADE' },
+    { name: 'London Investment Forum', lat: 51.5074, lng: -0.1278, category: 'CORPORATE_TRADE' },
+    { name: 'Dubai Trade Summit', lat: 25.2048, lng: 55.2708, category: 'CORPORATE_TRADE' },
+
+    // ANIME_COMIC
+    { name: 'Singapore Anime Fest', lat: 1.3521, lng: 103.8198, category: 'ANIME_COMIC' },
+    { name: 'Bangkok Comic Expo', lat: 13.7563, lng: 100.5018, category: 'ANIME_COMIC' },
+    { name: 'Manila Anime Carnival', lat: 14.5995, lng: 120.9842, category: 'ANIME_COMIC' },
+    { name: 'Jakarta Comic Con', lat: -6.2088, lng: 106.8456, category: 'ANIME_COMIC' },
+    { name: 'Sydney Supanova', lat: -33.8688, lng: 151.2093, category: 'ANIME_COMIC' },
+    { name: 'Melbourne Comic Fest', lat: -37.8136, lng: 144.9631, category: 'ANIME_COMIC' },
+    { name: 'Toronto Anime Expo', lat: 43.6532, lng: -79.3832, category: 'ANIME_COMIC' },
+    { name: 'London Comic Con', lat: 51.5074, lng: -0.1278, category: 'ANIME_COMIC' },
+
+    // THRIFT_VINTAGE
+    { name: 'Bangkok Vintage Market', lat: 13.7563, lng: 100.5018, category: 'THRIFT_VINTAGE' },
+    { name: 'Jakarta Flea Market', lat: -6.2088, lng: 106.8456, category: 'THRIFT_VINTAGE' },
+    { name: 'Sydney Retro Bazaar', lat: -33.8688, lng: 151.2093, category: 'THRIFT_VINTAGE' },
+    { name: 'Melbourne Vintage Fair', lat: -37.8136, lng: 144.9631, category: 'THRIFT_VINTAGE' },
+    { name: 'Toronto Thrift Fest', lat: 43.6532, lng: -79.3832, category: 'THRIFT_VINTAGE' },
+    { name: 'London Vintage Market', lat: 51.5074, lng: -0.1278, category: 'THRIFT_VINTAGE' },
+    { name: 'Paris Flea Market', lat: 48.8566, lng: 2.3522, category: 'THRIFT_VINTAGE' },
+
+    // WELLNESS_FITNESS
+    { name: 'Bali Wellness Retreat', lat: -8.3405, lng: 115.0920, category: 'WELLNESS_FITNESS' },
+    { name: 'Bangkok Yoga Fest', lat: 13.7563, lng: 100.5018, category: 'WELLNESS_FITNESS' },
+    { name: 'Sydney Fitness Expo', lat: -33.8688, lng: 151.2093, category: 'WELLNESS_FITNESS' },
+    { name: 'Melbourne Wellness Fair', lat: -37.8136, lng: 144.9631, category: 'WELLNESS_FITNESS' },
+    { name: 'Vancouver Outdoor Fest', lat: 49.2827, lng: -123.1207, category: 'WELLNESS_FITNESS' },
+    { name: 'Toronto Health Expo', lat: 43.6532, lng: -79.3832, category: 'WELLNESS_FITNESS' },
+    { name: 'London Mindfulness Fair', lat: 51.5074, lng: -0.1278, category: 'WELLNESS_FITNESS' },
+
+    // PET_FAIR
+    { name: 'Singapore Pet Expo', lat: 1.3521, lng: 103.8198, category: 'PET_FAIR' },
+    { name: 'Bangkok Pet Fair', lat: 13.7563, lng: 100.5018, category: 'PET_FAIR' },
+    { name: 'Sydney Pet Fest', lat: -33.8688, lng: 151.2093, category: 'PET_FAIR' },
+    { name: 'Toronto Pet Show', lat: 43.6532, lng: -79.3832, category: 'PET_FAIR' },
+    { name: 'London Pet Expo', lat: 51.5074, lng: -0.1278, category: 'PET_FAIR' },
+
+    // EDUCATIONAL
+    { name: 'Singapore STEM Fair', lat: 1.3521, lng: 103.8198, category: 'EDUCATIONAL' },
+    { name: 'Bangkok Education Expo', lat: 13.7563, lng: 100.5018, category: 'EDUCATIONAL' },
+    { name: 'Sydney Science Fest', lat: -33.8688, lng: 151.2093, category: 'EDUCATIONAL' },
+    { name: 'Toronto Learning Fair', lat: 43.6532, lng: -79.3832, category: 'EDUCATIONAL' },
+    { name: 'London Academic Expo', lat: 51.5074, lng: -0.1278, category: 'EDUCATIONAL' },
+    { name: 'Dubai Knowledge Summit', lat: 25.2048, lng: 55.2708, category: 'EDUCATIONAL' },
+
+    // OTHERS
+    { name: 'Singapore Night Festival', lat: 1.3521, lng: 103.8198, category: 'OTHERS' },
+    { name: 'Bangkok Cultural Carnival', lat: 13.7563, lng: 100.5018, category: 'OTHERS' },
+    { name: 'Sydney Harbour Fest', lat: -33.8688, lng: 151.2093, category: 'OTHERS' },
+    { name: 'Melbourne Arts Festival', lat: -37.8136, lng: 144.9631, category: 'OTHERS' },
+    { name: 'Toronto Multicultural Fest', lat: 43.6532, lng: -79.3832, category: 'OTHERS' },
+    { name: 'London Street Festival', lat: 51.5074, lng: -0.1278, category: 'OTHERS' },
+    { name: 'Dubai Entertainment Expo', lat: 25.2048, lng: 55.2708, category: 'OTHERS' },
+  ];
+
+  console.log('Seeding recent events...');
+
+  for (const loc of recentLocations) {
+    const slug = loc.name.toLowerCase().replace(/ /g, '-');
+
+    const existingEvent = await prisma.events.findFirst({
+      where: { slug: slug }
+    });
+
+    if (!existingEvent) {
+      // Recent dates: start dates spread across the next 2-3 months (0-90 days)
+      const startDate = new Date(Date.now() + Math.random() * 90 * 24 * 60 * 60 * 1000);
+      const endDate = new Date(startDate.getTime() + (Math.random() * 3 + 1) * 24 * 60 * 60 * 1000);
+
+      await prisma.events.create({
+        data: {
+          title: loc.name,
+          description: `Experience the best of ${loc.name}! Join us for a unique gathering of vendors and visitors.`,
+          address: `Central District, ${loc.name.split(' ')[0]}`,
+          category: loc.category as any,
+          currency_code: 'USD',
+          host_id: host2.id,
+          latitude: loc.lat,
+          longitude: loc.lng,
+          status: 'PUBLISHED',
+          slug: slug,
+          start_date: startDate,
+          end_date: endDate,
+          booths: { 
+            create: Array.from({ length: Math.floor(Math.random() * 16) + 5 }).map((_, i) => ({ 
+              name: `Booth ${String.fromCharCode(65 + i)}${i + 1}`, 
+              type: 'AVAILABLE',
+              x: i * 110, 
+              y: 0,
+              width: 100,
+              height: 100,
+              rotation: 0, 
+              price: parseFloat((Math.random() * 250 + 25).toFixed(2)), 
+              description: `A prime spot at ${loc.name}`
+            }
+            )),
+          },
+        },
+      });
+    }
+  }
   console.log('Seeding completed.');
 }
 
