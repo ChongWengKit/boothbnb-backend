@@ -232,7 +232,6 @@ const getPendingBookingsWithSessions = async () => {
   return prisma.booth_bookings.findMany({
     where: {
       payment_status: PaymentStatus.PENDING,
-      session_id: { not: null },
     },
   });
 };

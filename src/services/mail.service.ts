@@ -124,6 +124,7 @@ const attemptSend = async (logId: number) => {
         status: EmailLogStatus.PENDING,
         email_id: data?.id,
         attempts: currentAttempts,
+        last_attempt_at: new Date(),
       },
     });
   } catch (e: any) {
@@ -132,7 +133,8 @@ const attemptSend = async (logId: number) => {
       where: { id: log.id },
       data: {
         status: EmailLogStatus.FAILED,
-        attempts: currentAttempts
+        attempts: currentAttempts,
+        last_attempt_at: new Date(),
       },
     });
   }

@@ -224,6 +224,7 @@ model email_logs {
   email_id    String?          @db.VarChar(255)
   payload   Json
   attempts    Int      @default(0)
+  last_attempt_at DateTime?
   @@index([category])
   @@index([status, attempts])
   @@index([email_id])
