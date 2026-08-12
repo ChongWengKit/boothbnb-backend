@@ -236,6 +236,17 @@ const getPendingBookingsWithSessions = async () => {
   });
 };
 
+const hasPendingBooking = async (userId: number) => {
+  const booking = await prisma.booth_bookings.findFirst({
+    where: {
+      vendor_id: userId,
+      payment_status: PaymentStatus.PENDING,
+    },
+    select: { id: true },
+  });
+  return !!booking;
+};
+
 const updateBoothBooking = async (id: number, sessionId: string) => {
   return prisma.booth_bookings.update({
     where: { id },
@@ -782,6 +793,7 @@ export const eventRepository = {
   getEventsByIds,
   createBoothBooking,
   getPendingBookingsWithSessions,
+  hasPendingBooking,
   updateBoothBooking,
   confirmBoothBooking,
   confirmBoothBookingWithStatusUpdate,

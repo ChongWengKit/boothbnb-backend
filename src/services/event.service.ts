@@ -294,6 +294,9 @@ const createBoothCheckoutSession = async (vendorId: number, email: string, usern
     const booth = event.booths.find(b => b.id === boothId);
     if (!booth || booth.type !== BoothType.AVAILABLE) throw new Error('BOOTH_UNAVAILABLE');
 
+    const hasPending = await eventRepository.hasPendingBooking(vendorId);
+    if (hasPending) throw new Error('PENDING_BOOKING_EXISTS');
+
     const targetCurrency = await currencyRepository.getCurrencyRate(currencyCode.toUpperCase());
     if (!targetCurrency) throw new Error('CURRENCY_NOT_SUPPORTED');
 
