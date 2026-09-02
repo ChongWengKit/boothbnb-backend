@@ -56,9 +56,14 @@ const getUserEvents = async (username: string, page: number, limit: number) => {
     return { user, eventsData, meta };
 }
 
-const getEventsBySearchRequest = async (searchRequest: SearchEventRequest) => {
+const getEventsBySearchRequest = async (searchRequest: SearchEventRequest, userId?: number) => {
     const { events, total } = await eventRepository.getEventsBySearchRequest(searchRequest);
     const totalPages = Math.ceil(total / searchRequest.limit!);
+
+    let bookmarkedEventIds = new Set<number>();
+    if (userId) {
+        bookmarkedEventIds = await bookmarkRepository.findBookmarkedEventIdsByUserId(userId, events.map(event => event.id));
+    }
 
     const formattedEvents = events.map(event => {
         const total_capacity = event.total_slots;
@@ -77,6 +82,7 @@ const getEventsBySearchRequest = async (searchRequest: SearchEventRequest) => {
             latitude: event.latitude,
             longitude: event.longitude,
             available_booths: event.available_slots,
+            is_bookmarked: bookmarkedEventIds.has(event.id),
         };
     });
     return { formattedEvents, total, totalPages };

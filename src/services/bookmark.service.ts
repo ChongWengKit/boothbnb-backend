@@ -23,6 +23,7 @@ const getFavoriteBookmarks = async (userId: number, page: number, limit: number)
             total_capacity,
             total_bookings,
             available_booths: event.available_slots,
+            is_bookmarked: true,
         };
     })
     const totalPages = Math.ceil(total / limit);

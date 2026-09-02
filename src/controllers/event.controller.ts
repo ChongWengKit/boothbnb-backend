@@ -3,8 +3,6 @@ import type { Request, Response } from 'express';
 import { Role } from '../types/types.js';
 import { EventParamsResponse } from '../types/types.js';
 import Stripe from 'stripe';
-import jwt from 'jsonwebtoken';
-import { User } from '../types/types.js'
 import { eventService } from '../services/event.service.js';
 import { parseUserId } from '../lib/validation.js';
 
@@ -33,7 +31,14 @@ export const searchEvents = async (req: Request, res: Response<ApiResponse<Searc
         if (searchRequest.page! < 1 || searchRequest.limit! < 1 || searchRequest.limit! > 100) {
             return res.status(400).json({ success: false, message: 'Invalid pagination parameters.' });
         }
-        const result = await eventService.getEventsBySearchRequest(searchRequest);
+        let userId: number | undefined;
+        if (req.user) {
+            const parsedUserId = parseUserId(req.user.id);
+            if (parsedUserId !== null) {
+                userId = parsedUserId;
+            }
+        }
+        const result = await eventService.getEventsBySearchRequest(searchRequest, userId);
         const { formattedEvents, total, totalPages } = result;
         return res.status(200).json({
             success: true,
@@ -235,24 +240,6 @@ export const getEventBySlug = async (
                 return res.status(400).json({ success: false, message: 'Invalid user ID.' });
             }
             userId = parsedUserId;
-        } else {
-            const authHeader = req.headers.authorization;
-            if (authHeader?.startsWith('bearer ')) {
-                const token = authHeader.split(' ')[1];
-                try {
-                    const secret = process.env.JWT_SECRET;
-                    if (secret) {
-                        if (token) {
-                            const decoded = jwt.verify(token, process.env.JWT_SECRET!) as unknown as User;
-                            const parsedUserId = parseUserId(decoded.id);
-                            if (parsedUserId !== null) {
-                                userId = parsedUserId;
-                            }
-                        }
-                    }
-                } catch (e) {
-                }
-            }
         }
 
         const eventData = await eventService.getEventDetails(slug, userId, currencyCode);

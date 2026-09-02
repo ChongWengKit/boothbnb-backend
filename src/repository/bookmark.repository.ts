@@ -89,10 +89,25 @@ const isBookmarked = async (user_id: number, event_id: number) => {
   return !!bookmark;
 };
 
+const findBookmarkedEventIdsByUserId = async (user_id: number, event_ids: number[]) => {
+  if (event_ids.length === 0) return new Set<number>();
+  const bookmarks = await prisma.bookmarks.findMany({
+    where: {
+      user_id: user_id,
+      event_id: { in: event_ids },
+    },
+    select: {
+      event_id: true,
+    },
+  });
+  return new Set(bookmarks.map((b) => b.event_id));
+};
+
 export const bookmarkRepository = {
   createBookmark,
   deleteBookmark,
   findBookmarkByUserId,
   findBookmarkIdkByUserId,
   isBookmarked,
+  findBookmarkedEventIdsByUserId,
 };

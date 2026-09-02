@@ -139,7 +139,7 @@ export type SearchEventResponse = Array<{
   total_capacity: number;
   total_bookings: number;
   available_booths?: number;
-
+  is_bookmarked?: boolean;
 }>;
 
 export enum EventStatus {
