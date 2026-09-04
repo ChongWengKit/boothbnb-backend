@@ -160,6 +160,7 @@ export interface CloudinarySignatureResponse {
   cloudName: string;
   timestamp: number;
   folder: string;
+  allowedFormats: string[];
 }
 
 

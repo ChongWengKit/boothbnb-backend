@@ -1,9 +1,17 @@
 import { v2 as cloudinary } from "cloudinary";
-const generateCloudinarySignatureAction = async (timestamp: number, folder: string) => {
+import { CLOUDINARY_ALLOWED_FORMATS } from "../lib/constants/cloudinary.js";
+
+export interface CloudinarySignature {
+    signature: string;
+    timestamp: number;
+    folder: string;
+    allowedFormats: string[];
+}
+
+const generateCloudinarySignatureAction = async (timestamp: number, folder: string): Promise<CloudinarySignature> => {
     const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || "";
     const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || "";
     const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || "";
-    const CLOUDINARY_UPLOAD_FOLDER = process.env.CLODINARY_UPLOAD_FOLDER || "";
 
     cloudinary.config({
         cloud_name: CLOUDINARY_CLOUD_NAME,
@@ -11,11 +19,23 @@ const generateCloudinarySignatureAction = async (timestamp: number, folder: stri
         api_secret: CLOUDINARY_API_SECRET,
     });
 
+    const paramsToSign = {
+        timestamp,
+        folder,
+        allowed_formats: [...CLOUDINARY_ALLOWED_FORMATS],
+    };
+
     const signature = cloudinary.utils.api_sign_request(
-        { timestamp, folder },
+        paramsToSign,
         CLOUDINARY_API_SECRET,
     );
-    return signature;
+
+    return {
+        signature,
+        timestamp,
+        folder,
+        allowedFormats: [...CLOUDINARY_ALLOWED_FORMATS],
+    };
 }
 
 export const cloudinaryService = { generateCloudinarySignatureAction };
