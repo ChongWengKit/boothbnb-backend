@@ -3,6 +3,9 @@ import { z } from 'zod';
 export const paginationQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(12),
+  status: z.enum(["PENDING", "SUCCESSFUL", "FAILED", "BOUNCED", "COMPLAINED"]).optional(),
+  category: z.enum(["VERIFICATION", "PASSWORD_RESET", "BOOKING_CONFIRMATION", "HOST_APPROVED", "ADMIN_INVITATION"]).optional(),
+  search: z.string().optional(),
 });
 
 export const idParamSchema = z.object({
