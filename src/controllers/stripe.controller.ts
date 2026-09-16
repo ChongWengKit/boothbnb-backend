@@ -69,7 +69,6 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
         }
         return res.status(200).json({ received: true });
     } catch (error) {
-        console.error('Error handling Stripe webhook:', error);
-        return res.status(500).json({ success: false, message: error instanceof Error ? error.message : 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error processing webhook' });
     }
 };
