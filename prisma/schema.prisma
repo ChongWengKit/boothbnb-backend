@@ -26,6 +26,7 @@ model users {
   profile_photo String?
   bookmarks bookmarks[]
   admin_requests admin_requests[]
+  @@index([stripe_account_id])
   @@map("users")
   
 }
@@ -59,7 +60,7 @@ model reset_tokens {
   user_id    Int
   created_at DateTime @default(now())
   expires_in DateTime
-  @@index([user_id, expires_in, created_at])
+  @@index([user_id, expires_in])
   @@map("reset_tokens")
 }
 
@@ -113,14 +114,11 @@ model events {
    slug        String
    images     event_images[]
    bookmarks  bookmarks[]
-  @@index([slug])    
-  @@index([status])              
-  @@index([host_id])              
-  @@index([start_date])        
-  @@index([end_date])            
-  @@index([latitude])            
-  @@index([longitude]) 
-  @@index([category])
+  @@index([slug, status])
+  @@index([host_id, status])
+  @@index([status, start_date])
+  @@index([status, category, start_date])
+  @@index([status, latitude])
   @@map("events")
 }
 
@@ -129,6 +127,7 @@ model event_images {
   event_id    Int
   url         String      @db.VarChar(255)
   event        events     @relation(fields: [event_id], references: [id])
+  @@index([event_id])
   @@map("event_images")
 }
 
@@ -153,7 +152,7 @@ model booths {
   description   String?           @db.Text
   event          events           @relation(fields: [event_id], references: [id])
   bookings       booth_bookings[]
-  @@index([id, type])
+  @@index([event_id])
   @@map("booths")
 }
 
@@ -175,8 +174,9 @@ model booth_bookings {
   cardLast4      String?       @db.VarChar(4)
   stripeChargeId String?       @db.VarChar(255)
   receiptUrl     String?       @db.Text
-  @@index([vendor_id])
+  @@index([vendor_id, booked_at])
   @@index([payment_status])
+  @@index([booth_id])
   @@map("booth_bookings")
 }
 
@@ -198,7 +198,6 @@ model admin_requests {
   status     AdminRequestStatus @default(PENDING)
   created_at DateTime @default(now())
   updated_at DateTime? @updatedAt
-  @@index([action_type])
   @@index([status])
   @@index([user_id])
   @@map("admin_requests")
@@ -225,7 +224,6 @@ model email_logs {
   payload   Json
   attempts    Int      @default(0)
   last_attempt_at DateTime?
-  @@index([category])
   @@index([status, attempts])
   @@index([email_id])
   @@map("email_logs")
