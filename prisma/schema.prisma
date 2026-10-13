@@ -60,7 +60,7 @@ model reset_tokens {
   user_id    Int
   created_at DateTime @default(now())
   expires_in DateTime
-  @@index([user_id, expires_in])
+  @@index([user_id, expires_in, created_at])
   @@map("reset_tokens")
 }
 
@@ -198,7 +198,7 @@ model admin_requests {
   status     AdminRequestStatus @default(PENDING)
   created_at DateTime @default(now())
   updated_at DateTime? @updatedAt
-  @@index([status])
+  @@index([status, action_type])
   @@index([user_id])
   @@map("admin_requests")
 }
